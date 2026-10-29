@@ -28,11 +28,20 @@ with sync_playwright() as p:
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
         page.on("console", lambda m: m.type == "error" and errors.append(m.text))
+        # Keep test players out of the real cloud: Supabase is unreachable, so sign-in offers "play without saving".
+        page.route("**/*.supabase.co/**", lambda route: route.abort())
         page.goto(URL)
         page.wait_for_timeout(800)
         page.screenshot(path=str(out / "00-title.png"))
         page.locator(".play").tap(force=True)
-        page.wait_for_timeout(1500)
+        page.wait_for_selector(".name-input", timeout=15000)
+        page.screenshot(path=str(out / "01-signin.png"))
+        page.fill(".name-input", "Test Kid")
+        page.locator(".name-row .go").tap(force=True)
+        page.wait_for_selector("[data-act=offline]", timeout=15000)
+        page.screenshot(path=str(out / "01-signin-offline.png"))
+        page.locator("[data-act=offline]").click()
+        page.wait_for_selector(".node.current", timeout=15000)
         page.screenshot(path=str(out / "01-map.png"))
         page.evaluate(AUTO)
         seen, shot = set(), 2

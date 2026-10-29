@@ -27,3 +27,12 @@ node tools/build_content.mjs
 .venv/Scripts/python.exe -I tools/gen_audio.py
 node tools/build_sw.mjs
 ```
+
+## Players and cloud save
+- On first launch the child (or a grown-up) types a **name**, then makes a **4-digit secret code**. Progress then saves to the cloud automatically.
+- Typing the same name and code on another iPad or iPhone carries on from the same place. Progress from two devices is merged, so nothing earned is lost.
+- If there's no internet, "Play without saving" keeps progress on the device. Cloud save can be switched on later from the grown-ups corner.
+- Storage: the Whisker Academy Supabase project, in `ww_saves` / `ww_hits` (`cloud/schema.sql`). The tables are locked: the public key can only call the `ww_*` functions.
+  - Unlike Whisker, the secret code is checked on the server: the game sends a hash of name + code, and 5 wrong tries lock the name for 30 seconds.
+- Each launch adds one anonymous row to `ww_hits`: a random device id, no names.
+- Monitoring: the **Kids** tab in Hermes Control (`Documents/Projects/hermes-control`, `api/kids.py`) shows plays and players for Whisker Academy and Wordwild. It's reachable on the phone over Tailscale at https://dell.tail80c7e7.ts.net:8445/hermes/.

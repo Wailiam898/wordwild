@@ -20,6 +20,9 @@ const fresh = () => ({
   settings: { music: true, limit: 20 },
   unlocked: 0,         // parent skip-ahead: lessons below this index are open
   seenIntro: false,
+  // Account + cloud sync
+  name: '', pinHash: '', cloud: false,
+  savedAt: 0, syncedAt: 0, baseGems: 0,
 });
 
 let S = load();
@@ -32,13 +35,62 @@ function load() {
   return fresh();
 }
 
-export function save() {
+let onSave = null;
+export function setOnSave(fn) { onSave = fn; }
+
+export function persist() {
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+}
+
+export function save() {
+  S.savedAt = Date.now();
+  persist();
+  if (onSave) onSave();
+}
+
+// Replace local progress with a cloud save (keeps this device's settings and code).
+export function adopt(data, at) {
+  const keep = { pinHash: S.pinHash, settings: S.settings, today: S.today };
+  S = Object.assign(fresh(), data, keep, { cloud: true, savedAt: at, syncedAt: at });
+  S.baseGems = S.gems;
+  persist();
+}
+
+// Combine progress from another device so nothing earned on either is lost.
+export function merge(c) {
+  if (!c) return;
+  for (const [id, d] of Object.entries(c.done || {})) {
+    const m = S.done[id];
+    S.done[id] = m ? { stars: Math.max(m.stars, d.stars), acc: Math.max(m.acc, d.acc), plays: Math.max(m.plays, d.plays) } : d;
+  }
+  for (const [k, it] of Object.entries(c.items || {})) {
+    if (!S.items[k] || (it.n || 0) > (S.items[k].n || 0)) S.items[k] = it;
+  }
+  for (const [k, n] of Object.entries(c.confusions || {})) S.confusions[k] = Math.max(S.confusions[k] || 0, n);
+  const base = S.baseGems == null ? Math.min(S.gems, c.gems || 0) : S.baseGems;
+  S.gems = Math.max(0, S.gems + (c.gems || 0) - base);
+  S.baseGems = c.gems || 0;
+  for (const f of ['hats', 'wordlings', 'books']) S[f] = [...new Set([...(S[f] || []), ...(c[f] || [])])];
+  S.best = { pop: Math.max(S.best.pop, (c.best || {}).pop || 0), rocket: Math.max(S.best.rocket, (c.best || {}).rocket || 0) };
+  S.unlocked = Math.max(S.unlocked || 0, c.unlocked || 0);
+  S.seenIntro = S.seenIntro || !!c.seenIntro;
+  persist();
+}
+
+// Sign out on this device (progress stays in the cloud).
+export function signOut() {
+  const keep = { settings: S.settings };
+  S = Object.assign(fresh(), keep, { seenIntro: true });
+  persist();
 }
 
 export const state = () => S;
 
-export function reset() { S = fresh(); save(); }
+export function reset() {
+  const keep = { name: S.name, pinHash: S.pinHash, cloud: S.cloud, syncedAt: S.syncedAt, seenIntro: true };
+  S = Object.assign(fresh(), keep);
+  save();
+}
 
 // ---------- Lessons ----------
 const LESSONS = allLessons();
@@ -149,7 +201,7 @@ export function tickTime(sec) {
   const t = todayStr();
   if (S.today.date !== t) S.today = { date: t, sec: 0 };
   S.today.sec += sec;
-  if (Math.round(S.today.sec) % 15 === 0) save();
+  if (Math.round(S.today.sec) % 15 === 0) persist();
 }
 export function minutesToday() {
   return S.today.date === todayStr() ? S.today.sec / 60 : 0;

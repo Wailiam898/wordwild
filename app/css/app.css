@@ -422,3 +422,34 @@ canvas.fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-even
 /* Display font for chunky game UI */
 .btn, .gem-pill b, .count-pill, .dock-lbl, .arc-title, .arc-best, .speech, .hat-cost, .badge, .node .stars { font-family: var(--display); font-weight: 400; letter-spacing: .5px; }
 .dock-lbl { font-size: 15px; }
+
+/* ---------- Sign-in ---------- */
+.screen-login { background: radial-gradient(circle at 50% 30%, #8fe3ff, #2ab0ff 60%, #1584d1); }
+.login { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.6vh; padding: calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px); overflow-y: auto; }
+.login h2 { margin: 0; font-family: var(--display); font-weight: 400; font-size: clamp(30px, 7vmin, 52px); color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,.2); text-align: center; }
+.login-sub { margin: 0; color: #fff; font-size: 20px; font-weight: 600; text-align: center; opacity: .95; }
+.login-pip { width: clamp(120px, 26vmin, 200px); aspect-ratio: 1; }
+.login-err { min-height: 26px; color: #fff; background: rgba(214,58,85,.85); border-radius: 14px; padding: 0 14px; font-weight: 600; font-size: 18px; text-align: center; }
+.login-err:empty { background: none; }
+.login-err .chip { font: inherit; font-size: 16px; background: #fff; color: var(--purple-d); border-radius: 12px; padding: 6px 12px; margin: 6px 4px; }
+.name-row { display: flex; gap: 12px; align-items: center; }
+.name-input { font-family: var(--read); font-weight: 700; font-size: 34px; width: min(64vw, 340px); padding: 12px 20px; border-radius: 24px; border: 4px solid #fff; box-shadow: 0 6px 0 rgba(0,0,0,.15); color: var(--ink); outline: none; -webkit-user-select: text; user-select: text; }
+.name-input:focus { border-color: var(--sun); }
+.pin-dots { display: flex; gap: 18px; margin: 6px 0; }
+.pin-dots i { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.35); box-shadow: inset 0 3px 0 rgba(0,0,0,.12); transition: transform .15s, background .15s; }
+.pin-dots i.on { background: var(--sun); transform: scale(1.15); box-shadow: 0 3px 0 var(--sun-d); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: min(84vw, 340px); }
+.pin-key { aspect-ratio: 1.25; border-radius: 22px; background: #fff; font-family: var(--display); font-size: 36px; color: var(--purple-d); box-shadow: 0 6px 0 #b8adf0; }
+.pin-key.small { font-size: 28px; background: #ece8ff; }
+.pin-key.pressed { transform: translateY(4px); box-shadow: 0 2px 0 #b8adf0; }
+.cloud-pill { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.95); border-radius: 30px; padding: 6px 14px 6px 10px; box-shadow: 0 5px 0 rgba(0,0,0,.15); font-family: var(--display); font-size: 20px; }
+.cloud-pill span { font-family: var(--emoji); }
+.cloud-pill b { font-weight: 400; color: var(--grass-d); }
+.cloud-pill.off b { color: var(--coral-d); }
+.cloud-pill small { font-family: var(--ui); font-weight: 600; font-size: 15px; color: var(--purple-d); margin-left: 4px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) { .cloud-pill small { display: none; } }
+.name-input { width: min(58vw, 340px); }
+.name-row .btn.big { min-width: 84px; padding: 14px 20px; }
+.pin-pad { width: min(78vw, 320px); gap: 10px; }
+.pin-key { aspect-ratio: 1.7; font-size: 32px; }
+.login .login-pip { width: clamp(90px, 20vmin, 170px); }

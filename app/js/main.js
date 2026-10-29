@@ -5,6 +5,8 @@ import { h, onTap, sleep, shuffle, anim, burstAt, confetti, flyGems, clearFx } f
 import { pipSVG, wordlingSVG, eggSVG } from './art.js';
 import * as store from './store.js';
 import * as games from './games.js';
+import * as cloud from './cloud.js';
+import { loginFlow, changeCode, joinCloud } from './login.js';
 
 const app = document.getElementById('app');
 const LESSONS = allLessons();
@@ -60,6 +62,7 @@ function titleScreen() {
       s.seenIntro = true; store.save();
       await say('pl_hi');
     }
+    if (!s.name) await loginFlow();
     mapScreen();
   });
   show('title', el, 'title');
@@ -123,7 +126,7 @@ function mapScreen() {
 
   const settingsBtn = h('button', { class: 'btn round gear', 'aria-label': 'Grown-ups' }, h('span', {}, '⚙️'), h('i', { class: 'hold-ring' }));
   holdToOpen(settingsBtn, parentScreen);
-  const hud = h('div', { class: 'hud' }, settingsBtn, h('div', { class: 'hud-spacer' }), gemPill());
+  const hud = h('div', { class: 'hud' }, settingsBtn, h('div', { class: 'hud-spacer' }), cloudPill(), gemPill());
   const dock = h('nav', { class: 'dock' },
     dockBtn('🐾', 'Zoo', zooScreen, s.wordlings.length),
     dockBtn('🎩', 'Shop', shopScreen),
@@ -136,6 +139,20 @@ function mapScreen() {
     if (curNode) curNode.scrollIntoView({ block: 'center', behavior: 'instant' });
   });
   if (!s.done.L1) setTimeout(() => say('n_map_tap'), 600);
+}
+
+// ☁️✓ saved · ☁️… saving · ☁️✕ offline (progress kept on this device and synced later).
+function cloudPill() {
+  const s = store.state();
+  if (!s.name) return null;
+  const el = h('div', { class: 'cloud-pill' }, h('span', {}, '☁️'), h('b'), h('small', {}, s.name));
+  const set = st => {
+    el.querySelector('b').textContent = !s.cloud ? '✕' : st === 'saving' ? '…' : st === 'off' || st === 'denied' ? '✕' : '✓';
+    el.classList.toggle('off', !s.cloud || st === 'off' || st === 'denied');
+  };
+  const stop = cloud.onStatus(set);
+  new MutationObserver((_, o) => { if (!el.isConnected) { stop(); o.disconnect(); } }).observe(app, { childList: true });
+  return el;
 }
 
 function dockBtn(icon, label, fn, badge) {
@@ -508,9 +525,42 @@ function parentScreen() {
     store.reset(); mapScreen();
   };
 
+  const st = cloud.cloudStatus();
+  const acctMsg = h('p', { class: 'tip' });
+  const acctBtns = [];
+  if (s.name && s.cloud) {
+    const chg = h('button', { class: 'pbtn' }, 'Change secret code');
+    chg.onclick = async () => { const ok = await changeCode(); parentScreen(); setTimeout(() => { const m = document.querySelector('.acct-msg'); if (m) m.textContent = ok ? 'New secret code saved.' : 'Code not changed (are you online?).'; }, 50); };
+    const sync = h('button', { class: 'pbtn' }, 'Sync now');
+    sync.onclick = async () => { sync.textContent = 'Syncing…'; await cloud.sync(); await cloud.push(); sync.textContent = cloud.cloudStatus() === 'ok' ? 'Synced ✓' : 'Offline — will retry'; };
+    acctBtns.push(chg, sync);
+  } else if (s.name) {
+    const join = h('button', { class: 'pbtn' }, 'Turn on cloud save');
+    join.onclick = async () => {
+      const r = await joinCloud(); parentScreen();
+      const msg = { ok: 'Cloud save is on.', taken: `Someone already has a cloud save called ${s.name}. Sign out and pick a different name.`, offline: 'No internet right now. Try again later.', name: 'Sign out and sign in with a real name first.', cancel: '' }[r];
+      setTimeout(() => { const m = document.querySelector('.acct-msg'); if (m) m.textContent = msg; }, 50);
+    };
+    acctBtns.push(join);
+  }
+  const out = h('button', { class: 'pbtn' }, s.name ? 'Sign out / switch player' : 'Sign in');
+  let outArm = false;
+  out.onclick = async () => {
+    if (s.name && !s.cloud && !outArm) { outArm = true; out.textContent = 'Not saved to the cloud: tap again to sign out and lose it'; return; }
+    if (s.cloud) await cloud.push();
+    if (s.name) store.signOut();
+    titleScreen();
+  };
+  acctBtns.push(out);
+  acctMsg.className = 'tip acct-msg';
+
   const el = h('div', { class: 'parent' },
     h('div', { class: 'p-head' }, h('button', { class: 'pbtn', onclick: mapScreen }, '← Back to the game'), h('h2', {}, 'Grown-ups')),
     h('div', { class: 'p-grid' },
+      pcard('Player',
+        h('p', {}, s.name ? h('b', {}, s.name) : 'Not signed in', s.name ? (s.cloud ? ` · cloud save ${st === 'ok' ? 'up to date ✓' : st === 'saving' ? 'saving…' : st === 'denied' ? 'refused (code changed on another device? sign out and back in)' : 'waiting for internet'}` : ' · saved on this device only') : ''),
+        h('p', { class: 'tip' }, 'Sign in on any iPad or iPhone with the same name and secret code to carry on from where you left off.'),
+        h('div', { class: 'p-row' }, acctBtns), acctMsg),
       pcard('Progress',
         h('p', {}, h('b', {}, `${Object.keys(s.done).length} of ${LESSONS.length}`), ' lessons done. Next up: ', h('b', {}, `${L.id} (${L.g.length ? L.g.join(', ') : 'review'})`)),
         h('p', {}, 'Recent accuracy: ', h('b', {}, acc + '%'), ' — the game adjusts difficulty to keep this near 85%.'),
@@ -539,7 +589,12 @@ function pcard(title, ...kids) { return h('div', { class: 'pcard' }, h('h3', {},
 // ================================================================ Boot
 document.addEventListener('gesturestart', e => e.preventDefault());
 document.addEventListener('dblclick', e => e.preventDefault());
+store.setOnSave(() => cloud.queue());
 titleScreen();
+cloud.countPlay();
+if (store.state().name && store.state().cloud) {
+  cloud.sync().then(r => { if (r === 'adopted' && screenName === 'map') mapScreen(); });
+}
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
