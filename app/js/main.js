@@ -1,0 +1,546 @@
+import { WORLDS, GRAPHEMES, STORIES, WORDLINGS, HATS, LINES, PIP_LINES, parseWords, segment, allLessons, knownAt } from './data.js';
+import * as audio from './audio.js';
+import { say, sfx, preload, stopSpeech } from './audio.js';
+import { h, onTap, sleep, shuffle, anim, burstAt, confetti, flyGems, clearFx } from './ui.js';
+import { pipSVG, wordlingSVG, eggSVG } from './art.js';
+import * as store from './store.js';
+import * as games from './games.js';
+
+const app = document.getElementById('app');
+const LESSONS = allLessons();
+const hatEmoji = () => (HATS.find(x => x.id === store.state().hat) || HATS[0]).e;
+let screenName = '';
+
+function show(name, el, theme) {
+  stopSpeech();
+  if (name !== 'hatch') clearFx();
+  screenName = name;
+  app.innerHTML = '';
+  app.className = 'screen-' + name + (theme ? ' theme-' + theme : '');
+  app.append(el);
+  if (theme) audio.setTheme(theme);
+}
+
+function gemPill() {
+  return h('div', { class: 'gem-pill' }, h('span', { class: 'gem-ico' }, '💎'), h('b', {}, String(store.state().gems)));
+}
+function refreshGems() {
+  document.querySelectorAll('.gem-pill b').forEach(b => (b.textContent = store.state().gems));
+}
+function backBtn(fn) {
+  return onTap(h('button', { class: 'btn round back', 'aria-label': 'Back' }, '⬅'), () => { sfx('tap'); fn(); });
+}
+
+// Time played (for the parent's daily limit).
+setInterval(() => {
+  if (!document.hidden && ['lesson', 'arcade', 'story'].includes(screenName)) store.tickTime(1);
+}, 1000);
+
+// ================================================================ Title
+function titleScreen() {
+  const pip = h('div', { class: 'title-pip', html: pipSVG('happy', hatEmoji()) });
+  const play = h('button', { class: 'btn huge play' }, '▶');
+  const el = h('div', { class: 'title' },
+    h('div', { class: 'title-sky' }, ...Array.from({ length: 6 }, (_, i) => h('div', { class: 'cloud c' + i }))),
+    h('div', { class: 'isle isle1' }), h('div', { class: 'isle isle2' }),
+    h('h1', { class: 'logo' }, ...[...'Wordwild'].map((c, i) => h('span', { style: { '--i': i } }, c))),
+    pip, play,
+  );
+  let starting = false;
+  onTap(play, async () => {
+    if (starting) return;
+    starting = true;
+    audio.unlock();
+    audio.setMusic(store.state().settings.music);
+    sfx('boing');
+    const s = store.state();
+    if (!s.seenIntro) {
+      pip.innerHTML = pipSVG('talk', hatEmoji());
+      anim(pip, 'jump', 700);
+      s.seenIntro = true; store.save();
+      await say('pl_hi');
+    }
+    mapScreen();
+  });
+  show('title', el, 'title');
+}
+
+// ================================================================ Map
+const NODE_X = [50, 74, 56, 28, 44, 70];
+const DECOR = {
+  sands: ['🌴', '🐚', '🦀', '⛱️', '🌊', '🐠', '🌴', '🐢'],
+  jungle: ['🌴', '🦜', '🐒', '🌺', '🍌', '🦋', '🌿', '🐸'],
+  volcano: ['🌋', '🔥', '🦖', '🪨', '🌶️', '🦎', '🌋', '🔥'],
+  caves: ['💎', '🔮', '🦇', '✨', '🍄', '💎', '🌟', '🔮'],
+};
+
+function mapScreen() {
+  const s = store.state();
+  const cur = store.currentIndex();
+  const scroller = h('div', { class: 'map-scroll' });
+  let curNode = null;
+  let li = 0;
+  WORLDS.forEach((wd, wi) => {
+    const n = wd.lessons.length;
+    const rowH = 150;
+    const sec = h('section', { class: 'world theme-' + wd.theme });
+    sec.append(h('div', { class: 'world-banner' }, h('span', {}, DECOR[wd.theme][0]), wd.name));
+    const field = h('div', { class: 'world-field', style: { height: n * rowH + 110 + 'px' } });
+    const pts = wd.lessons.map((_, k) => [NODE_X[(li + k) % NODE_X.length], k * rowH + 150]);
+    const path = pts.map((p, k) => (k ? 'L' : 'M') + p[0] + ' ' + p[1]).join(' ');
+    field.innerHTML = `<svg class="path" viewBox="0 0 100 ${n * rowH + 110}" preserveAspectRatio="none"><path d="${path}" vector-effect="non-scaling-stroke"/></svg>`;
+    DECOR[wd.theme].forEach((e, k) => {
+      const d = h('div', { class: 'decor', style: { left: (k % 2 ? 80 + (k * 7) % 14 : 3 + (k * 5) % 12) + '%', top: (k * 97) % (n * rowH) + 20 + 'px', animationDelay: k * 0.4 + 's' } }, e);
+      field.append(d);
+    });
+    wd.lessons.forEach((L, k) => {
+      const idx = li + k;
+      const done = s.done[L.id];
+      const open = store.isOpen(idx);
+      const isCur = idx === cur;
+      const node = h('div', { class: 'node' + (done ? ' done' : '') + (isCur ? ' current' : '') + (!open ? ' locked' : '') + (L.review ? ' review' : ''), style: { left: pts[k][0] + '%', top: pts[k][1] + 'px' } });
+      if (done) {
+        node.append(h('div', { class: 'node-wl', html: wordlingSVG(WORDLINGS[L.id]) }),
+          h('div', { class: 'stars' }, '⭐'.repeat(done.stars) + '☆'.repeat(3 - done.stars)));
+      } else if (open) {
+        node.append(h('div', { class: 'node-egg', html: eggSVG(WORDLINGS[L.id], 0, L.review) }));
+        if (isCur) node.append(h('div', { class: 'node-pip', html: pipSVG('happy', hatEmoji()) }));
+      } else {
+        node.append(h('div', { class: 'node-lock' }, L.review ? '🏆' : '🔒'));
+      }
+      if (open) onTap(node, () => { sfx('tap'); startLesson(idx); });
+      else onTap(node, () => { sfx('bad'); anim(node, 'shake'); });
+      if (isCur) curNode = node;
+      field.append(node);
+    });
+    li += n;
+    sec.append(field);
+    scroller.append(sec);
+  });
+  scroller.append(h('section', { class: 'world theme-sky' },
+    h('div', { class: 'world-banner' }, h('span', {}, '🏰'), 'Sky Castle'),
+    h('div', { class: 'coming' }, '☁️ 🏰 ☁️', h('small', {}, 'More worlds coming soon'))));
+
+  const settingsBtn = h('button', { class: 'btn round gear', 'aria-label': 'Grown-ups' }, h('span', {}, '⚙️'), h('i', { class: 'hold-ring' }));
+  holdToOpen(settingsBtn, parentScreen);
+  const hud = h('div', { class: 'hud' }, settingsBtn, h('div', { class: 'hud-spacer' }), gemPill());
+  const dock = h('nav', { class: 'dock' },
+    dockBtn('🐾', 'Zoo', zooScreen, s.wordlings.length),
+    dockBtn('🎩', 'Shop', shopScreen),
+    dockBtn('📚', 'Books', libraryScreen, s.books.length),
+    dockBtn('🎮', 'Play', arcadeScreen),
+  );
+  show('map', h('div', { class: 'map' }, scroller, hud, dock));
+  audio.startMusicIfOn();
+  requestAnimationFrame(() => {
+    if (curNode) curNode.scrollIntoView({ block: 'center', behavior: 'instant' });
+  });
+  if (!s.done.L1) setTimeout(() => say('n_map_tap'), 600);
+}
+
+function dockBtn(icon, label, fn, badge) {
+  const b = h('button', { class: 'dock-btn' }, h('span', { class: 'dock-ico' }, icon), h('span', { class: 'dock-lbl' }, label),
+    badge ? h('i', { class: 'badge' }, String(badge)) : null);
+  return onTap(b, () => { sfx('tap'); fn(); });
+}
+
+function holdToOpen(btn, fn) {
+  let t = null;
+  const start = () => {
+    btn.classList.add('holding');
+    t = setTimeout(() => { btn.classList.remove('holding'); fn(); }, 1600);
+  };
+  const end = () => { btn.classList.remove('holding'); clearTimeout(t); };
+  btn.addEventListener('pointerdown', start);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => btn.addEventListener(e, end));
+}
+
+// ================================================================ Lesson runner
+function pictureWordsUpTo(i) {
+  const seen = new Map();
+  LESSONS.slice(0, i + 1).forEach((L, k) => {
+    const known = knownAt(k);
+    parseWords(L.words).forEach(x => {
+      if (x.e && !seen.has(x.w)) seen.set(x.w, { ...x, seg: segment(x.w, known.g) });
+    });
+  });
+  return [...seen.values()];
+}
+
+function lessonPlan(i) {
+  const L = LESSONS[i];
+  const known = knownAt(i);
+  const prev = i > 0 ? knownAt(i - 1) : { g: new Set(), h: new Set() };
+  const words = parseWords(L.words).map(x => ({ ...x, seg: segment(x.w, known.g) }));
+  const pics = words.filter(x => x.e);
+  const hasNew = x => L.g.some(g => x.seg.includes(g));
+  const ordered = [...shuffle(pics.filter(hasNew)), ...shuffle(pics.filter(x => !hasNew(x)))];
+  const steps = [];
+
+  if (prev.g.size) {
+    const weak = store.pickReview([...prev.g], 4, 'g:');
+    store.topConfusions(3).forEach(([k]) => { const t = k.split('|')[0]; if (prev.g.has(t) && !weak.includes(t)) weak.unshift(t); });
+    steps.push(['pop', weak.slice(0, 5)]);
+  }
+  // New sounds in groups of up to 3, each group followed by a quick pop game.
+  for (let k = 0; k < L.g.length; k += 3) {
+    const grp = L.g.slice(k, k + 3);
+    grp.forEach(g => steps.push(['meet', g]));
+    steps.push(['pop', shuffle([...grp, ...grp, ...L.g.slice(0, k)]).slice(0, Math.max(4, grp.length * 2))]);
+  }
+  const nb = L.review ? 2 : 3;
+  ordered.slice(0, nb).forEach((w, k) => steps.push(['blast', w, k === 0]));
+  if (L.review) steps.push(['speed', shuffle(pics).slice(0, 6)]);
+  const forgeWords = shuffle(ordered.slice(nb).length >= 2 ? ordered.slice(nb) : ordered).slice(0, 2);
+  forgeWords.forEach(w => steps.push(['forge', w]));
+  L.heart.forEach((hw, k) => steps.push(['heart', hw, k === 0]));
+  const teach = shuffle(words.filter(w => !w.e)).concat(shuffle(pics)).slice(0, 3);
+  teach.forEach(w => steps.push(['pip', w]));
+  if (L.story) steps.push(['story', L.story]);
+  return { L, known, steps };
+}
+
+async function startLesson(i) {
+  if (store.overLimit()) return restScreen();
+  const { L, known, steps } = lessonPlan(i);
+  const wd = WORLDS[L.wi];
+  const pool = pictureWordsUpTo(i);
+
+  // Preload the audio this lesson needs.
+  const need = ['n_praise1', 'n_oops1'];
+  [...known.g].forEach(g => need.push('p_' + g, 'w_' + GRAPHEMES[g].key));
+  pool.forEach(p => need.push('w_' + p.w));
+  steps.forEach(s => { if (s[0] === 'pip') need.push('pw_' + s[1].w); });
+  preload(Object.keys(LINES).map(k => 'n_' + k).concat(Object.keys(PIP_LINES).map(k => 'pl_' + k), need));
+
+  const stage = h('div', { class: 'stage' });
+  const dots = h('div', { class: 'progress' }, h('div', { class: 'progress-fill' }), h('div', { class: 'progress-pip', html: pipSVG('happy', hatEmoji()) }));
+  const replayBtn = h('button', { class: 'btn round replay', 'aria-label': 'Hear again' }, '🔊');
+  const home = h('button', { class: 'btn round back', 'aria-label': 'Map' }, '🏠');
+  let aborted = false, abort;
+  const abortP = new Promise(r => (abort = r));
+  onTap(home, () => confirmLeave(() => { aborted = true; abort(null); stopSpeech(); G.onExit && G.onExit(); mapScreen(); }));
+  let replayFn = null;
+  onTap(replayBtn, () => { sfx('tap'); anim(replayBtn, 'boing'); replayFn && replayFn(); });
+  const bg = themeBg(wd.theme);
+  show('lesson', h('div', { class: 'lesson' }, bg, h('div', { class: 'topbar' }, home, dots, gemPill(), replayBtn), stage), wd.theme);
+  audio.startMusicIfOn();
+
+  let gemsEarned = 0;
+  const G = {
+    stage, known, pool,
+    setReplay: fn => (replayFn = fn),
+    gem: (el, n) => { gemsEarned += n; store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); },
+  };
+  let right = 0, total = 0;
+  for (let k = 0; k < steps.length; k++) {
+    if (aborted) return;
+    const p = k / steps.length;
+    dots.firstChild.style.width = p * 100 + '%';
+    dots.lastChild.style.left = p * 100 + '%';
+    const [type, a, b] = steps[k];
+    stage.className = 'stage step-' + type;
+    G.onExit = null;
+    let run;
+    if (type === 'pop') run = games.soundPop(G, a);
+    else if (type === 'meet') run = games.meet(G, a);
+    else if (type === 'blast') run = games.blast(G, a, b);
+    else if (type === 'forge') run = games.forge(G, a);
+    else if (type === 'heart') run = games.heartWord(G, a, b);
+    else if (type === 'pip') run = games.teachPip(G, a, hatEmoji());
+    else if (type === 'speed') run = games.speedRead(G, a);
+    else if (type === 'story') run = games.story(G, a, { hat: hatEmoji() });
+    const res = await Promise.race([run, abortP]);
+    if (!res || aborted) return;
+    right += res.right; total += res.total;
+    await sleep(250);
+  }
+  dots.firstChild.style.width = '100%';
+  dots.lastChild.style.left = '100%';
+  const acc = total ? right / total : 1;
+  const { stars, first } = store.completeLesson(L.id, acc);
+  store.addGems(5);
+  hatchScreen(L, stars, first, gemsEarned + 5);
+}
+
+// Soft floating shapes plus a few faint theme props behind the activities.
+function themeBg(theme) {
+  const spots = [[4, 18], [86, 26], [8, 62], [84, 70], [46, 8]];
+  return h('div', { class: 'lesson-bg' },
+    ...Array.from({ length: 8 }, (_, k) => h('i', { style: { '--k': k } })),
+    ...DECOR[theme].slice(0, 5).map((e, k) => h('b', { class: 'bg-decor', style: { left: spots[k][0] + '%', top: spots[k][1] + '%', animationDelay: -k * 0.7 + 's' } }, e)));
+}
+
+function confirmLeave(yes) {
+  const yesB = h('button', { class: 'btn big yes' }, '🏠');
+  const noB = h('button', { class: 'btn big no' }, '▶');
+  const m = h('div', { class: 'modal' }, h('div', { class: 'modal-card pop-in' },
+    h('div', { class: 'modal-pip', html: pipSVG('sad', hatEmoji()) }), h('div', { class: 'row' }, noB, yesB)));
+  onTap(yesB, () => { m.remove(); yes(); });
+  onTap(noB, () => m.remove());
+  document.body.append(m);
+}
+
+// ================================================================ Egg hatch + rewards
+async function hatchScreen(L, stars, first, gems) {
+  const name = WORDLINGS[L.id];
+  const egg = h('div', { class: 'hatch-egg', html: eggSVG(name, 0, L.review) });
+  const rays = h('div', { class: 'rays' });
+  const starsEl = h('div', { class: 'big-stars' }, ...[0, 1, 2].map(k => h('span', { class: k < stars ? 'on' : '' }, '⭐')));
+  const wrap = h('div', { class: 'hatch' }, rays, starsEl, egg);
+  show('hatch', wrap);
+  starsEl.querySelectorAll('.on').forEach((s, k) => setTimeout(() => { s.classList.add('pop'); sfx('coin'); }, 400 + k * 350));
+  confetti(60);
+  await say('n_lesson_done');
+  if (!first && store.state().wordlings.includes(L.id)) {
+    // Replays award gems, not a second Wordling.
+    egg.remove();
+    return finishRewards(wrap, gems, null);
+  }
+  await say('n_egg_hatch');
+  let cracks = 0;
+  await new Promise(resolve => {
+    onTap(egg, () => {
+      if (cracks >= 3) return;
+      cracks++;
+      sfx('crack');
+      egg.innerHTML = eggSVG(name, cracks, L.review);
+      anim(egg, 'shake', 400);
+      burstAt(egg, 10, 'circle');
+      if (cracks >= 3) resolve();
+    });
+  });
+  await sleep(300);
+  sfx('fanfare');
+  egg.classList.add('burst');
+  burstAt(egg, 60);
+  confetti(120);
+  await sleep(350);
+  const wl = h('div', { class: 'hatch-wl pop-in', html: wordlingSVG(name) });
+  const label = h('div', { class: 'wl-name pop-in' }, name);
+  egg.replaceWith(h('div', { class: 'hatch-reveal' }, wl, label));
+  store.addWordling(L.id);
+  await say('n_egg_meet', 200, 'w_' + name.toLowerCase());
+  onTap(wl, () => { anim(wl, 'jump', 700); say('w_' + name.toLowerCase()); });
+  finishRewards(wrap, gems, wl);
+}
+
+function finishRewards(wrap, gems, from) {
+  const pill = gemPill();
+  const go = h('button', { class: 'btn big go pop-in' }, '▶');
+  wrap.append(h('div', { class: 'reward-row' }, pill, go));
+  flyGems(from || wrap, Math.min(8, gems));
+  setTimeout(refreshGems, 1200);
+  onTap(go, () => {
+    sfx('tap');
+    if (store.overLimit()) restScreen(); else mapScreen();
+  });
+}
+
+// ================================================================ Rest (daily limit)
+async function restScreen() {
+  const pip = h('div', { class: 'rest-pip', html: pipSVG('sleepy', hatEmoji()) });
+  const back = backBtn(mapScreen);
+  show('rest', h('div', { class: 'rest' }, back, h('div', { class: 'moon' }, '🌙'), h('div', { class: 'zzz' }, 'z z z'), pip));
+  await say('n_rest');
+}
+
+// ================================================================ Zoo
+function zooScreen() {
+  const s = store.state();
+  const meadow = h('div', { class: 'meadow' });
+  s.wordlings.forEach((id, k) => {
+    const name = WORDLINGS[id];
+    const wl = h('div', { class: 'roam', style: { left: 8 + (k * 37) % 76 + '%', top: 10 + (k * 23) % 62 + '%', '--d': (6 + (k % 5)) + 's', '--dx': ((k % 2 ? 1 : -1) * (20 + k * 7 % 40)) + 'px' } },
+      h('div', { class: 'roam-body', html: wordlingSVG(name) }), h('div', { class: 'roam-name' }, name));
+    onTap(wl, () => { anim(wl, 'jump', 700); sfx('boing'); say('w_' + name.toLowerCase()); burstAt(wl, 12); });
+    meadow.append(wl);
+  });
+  const shelf = h('div', { class: 'collection' }, Object.entries(WORDLINGS).map(([id, name]) =>
+    h('div', { class: 'slot' + (s.wordlings.includes(id) ? ' got' : '') , html: wordlingSVG(name, !s.wordlings.includes(id)) })));
+  show('zoo', h('div', { class: 'zoo' },
+    h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'count-pill' }, `🐾 ${s.wordlings.length} / ${Object.keys(WORDLINGS).length}`), gemPill()),
+    meadow, shelf));
+  say(s.wordlings.length ? 'n_zoo' : 'n_map_tap');
+}
+
+// ================================================================ Shop
+function shopScreen() {
+  const s = store.state();
+  const pip = h('div', { class: 'shop-pip', html: pipSVG('happy', hatEmoji()) });
+  const grid = h('div', { class: 'hat-grid' });
+  const render = () => {
+    grid.innerHTML = '';
+    HATS.forEach(hat => {
+      const owned = s.hats.includes(hat.id);
+      const b = h('button', { class: 'hat-btn' + (s.hat === hat.id ? ' on' : '') + (owned ? ' owned' : '') },
+        h('span', { class: 'hat-e' }, hat.e || '🚫'),
+        owned ? h('span', { class: 'hat-cost ok' }, s.hat === hat.id ? '✔' : '') : h('span', { class: 'hat-cost' }, '💎' + hat.cost));
+      onTap(b, () => {
+        if (!owned) {
+          if (s.gems < hat.cost) { sfx('bad'); anim(b, 'shake'); anim(document.querySelector('.gem-pill'), 'shake'); return; }
+          store.addGems(-hat.cost); s.hats.push(hat.id); sfx('coin'); burstAt(b, 20); refreshGems();
+        }
+        s.hat = hat.id; store.save(); sfx('sparkle');
+        pip.innerHTML = pipSVG('wow', hat.e); anim(pip, 'jump', 700);
+        setTimeout(() => (pip.innerHTML = pipSVG('happy', hat.e)), 900);
+        render();
+      });
+      grid.append(b);
+    });
+  };
+  render();
+  show('shop', h('div', { class: 'shop' }, h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()), pip, grid));
+  say('n_shop');
+}
+
+// ================================================================ Library
+function libraryScreen() {
+  const s = store.state();
+  const shelf = h('div', { class: 'shelf' });
+  Object.entries(STORIES).forEach(([id, st]) => {
+    const got = s.books.includes(id);
+    const b = h('button', { class: 'book' + (got ? '' : ' locked') }, h('span', { class: 'book-e' }, got ? st.cover : '🔒'), h('span', { class: 'book-t' }, got ? st.title : ''));
+    if (got) onTap(b, () => { sfx('tap'); rereadStory(id); });
+    shelf.append(b);
+  });
+  show('library', h('div', { class: 'library' }, h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()), shelf));
+  say('n_library');
+}
+
+async function rereadStory(id) {
+  const lessonIdx = LESSONS.findIndex(L => L.story === id);
+  const stage = h('div', { class: 'stage step-story' });
+  let replayFn = null;
+  const replayBtn = h('button', { class: 'btn round replay' }, '🔊');
+  onTap(replayBtn, () => replayFn && replayFn());
+  const theme = WORLDS[LESSONS[lessonIdx].wi].theme;
+  let aborted = false, abort; const abortP = new Promise(r => (abort = r));
+  show('story', h('div', { class: 'lesson' }, themeBg(theme),
+    h('div', { class: 'topbar' }, backBtn(() => { aborted = true; abort(null); libraryScreen(); }), h('div', { class: 'hud-spacer' }), gemPill(), replayBtn), stage), theme);
+  const G = { stage, known: knownAt(lessonIdx), pool: pictureWordsUpTo(lessonIdx), setReplay: f => (replayFn = f),
+    gem: (el, n) => { store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); } };
+  const res = await Promise.race([games.story(G, id, { reread: true, hat: hatEmoji() }), abortP]);
+  if (res && !aborted) libraryScreen();
+}
+
+// ================================================================ Arcade
+function arcadeScreen() {
+  const s = store.state();
+  const doneIdx = Math.max(0, LESSONS.reduce((m, L, i) => (s.done[L.id] ? i : m), 0));
+  const card = (icon, title, best, fn) => onTap(h('button', { class: 'arcade-card pop-in' },
+    h('div', { class: 'arc-ico' }, icon), h('div', { class: 'arc-title' }, title), h('div', { class: 'arc-best' }, '🏆 ' + best)), () => { sfx('tap'); fn(); });
+  show('arcade-menu', h('div', { class: 'arcade' },
+    h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()),
+    h('div', { class: 'arcade-cards' },
+      card('🫧', 'Bubble Blitz', s.best.pop, () => playArcade('pop', doneIdx)),
+      card('🚀', 'Rocket Read', s.best.rocket, () => playArcade('rocket', doneIdx)))));
+}
+
+async function playArcade(kind, idx) {
+  const known = knownAt(idx);
+  const pool = pictureWordsUpTo(idx);
+  const stage = h('div', { class: 'stage step-' + (kind === 'pop' ? 'pop' : 'speed') });
+  let replayFn = null;
+  const replayBtn = h('button', { class: 'btn round replay' }, '🔊');
+  onTap(replayBtn, () => replayFn && replayFn());
+  let aborted = false, abort; const abortP = new Promise(r => (abort = r));
+  const G = { stage, known, pool, setReplay: f => (replayFn = f),
+    gem: (el, n) => { store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); } };
+  show('arcade', h('div', { class: 'lesson' }, themeBg(WORLDS[LESSONS[idx].wi].theme),
+    h('div', { class: 'topbar' }, backBtn(() => { aborted = true; abort(null); G.onExit && G.onExit(); arcadeScreen(); }), h('div', { class: 'hud-spacer' }), gemPill(), replayBtn), stage),
+  WORLDS[LESSONS[idx].wi].theme);
+  audio.startMusicIfOn();
+  preload([...known.g].map(g => 'p_' + g).concat(pool.map(p => 'w_' + p.w)));
+  await say('n_arcade_go');
+  const run = kind === 'pop'
+    ? games.soundPop(G, shuffle([...known.g]), { seconds: 60 })
+    : games.speedRead(G, pool, { seconds: 60 });
+  const res = await Promise.race([run, abortP]);
+  if (!res || aborted) return;
+  const s = store.state();
+  const key = kind === 'pop' ? 'pop' : 'rocket';
+  const isBest = res.score > s.best[key];
+  if (isBest) { s.best[key] = res.score; store.save(); }
+  stage.innerHTML = '';
+  const go = h('button', { class: 'btn big go' }, '▶');
+  stage.append(h('div', { class: 'center-col' }, h('div', { class: 'final-score pop-in' }, (isBest ? '🏆 ' : '') + res.score), go));
+  confetti(isBest ? 160 : 60);
+  sfx('fanfare');
+  await say('n_arcade_done');
+  onTap(go, arcadeScreen);
+}
+
+// ================================================================ Parent corner
+function parentScreen() {
+  stopSpeech();
+  const s = store.state();
+  const cur = store.currentIndex();
+  const L = LESSONS[cur];
+  const acc = Math.round(store.accuracy() * 100);
+  const sounds = Object.keys(GRAPHEMES).map(g => {
+    const m = store.mastery('g:' + g);
+    const b = h('button', { class: 'snd m' + m, title: 'Play sound' }, g);
+    onTap(b, () => { audio.unlock(); audio.tap('p_' + g); });
+    return b;
+  });
+  const conf = store.topConfusions(5);
+  const weakWords = Object.entries(s.items).filter(([k, v]) => k.startsWith('w:') && v.n >= 2 && v.c / v.n < 0.6).map(([k]) => k.slice(2)).slice(0, 12);
+  const limitSel = h('select', {}, ...[0, 10, 15, 20, 30, 45].map(m => h('option', { value: m, selected: s.settings.limit === m ? '' : null }, m ? `${m} minutes` : 'No limit')));
+  limitSel.onchange = () => { s.settings.limit = +limitSel.value; store.save(); };
+  const music = h('input', { type: 'checkbox', checked: s.settings.music ? '' : null });
+  music.onchange = () => { s.settings.music = music.checked; store.save(); audio.setMusic(music.checked); };
+  const jumpSel = h('select', {}, ...LESSONS.map((l, i) => h('option', { value: i, selected: i === Math.max(cur, s.unlocked) ? '' : null }, `${l.id} — ${WORLDS[l.wi].name}: ${l.g.length ? l.g.join(' ') : 'review'}`)));
+  const jumpBtn = h('button', { class: 'pbtn' }, 'Open up to here');
+  jumpBtn.onclick = () => {
+    const to = +jumpSel.value;
+    s.unlocked = to + 1;
+    // Mark earlier lessons as done so the path continues from the chosen point.
+    LESSONS.slice(0, to).forEach(l => { if (!s.done[l.id]) s.done[l.id] = { stars: 1, acc: 0, plays: 0, skipped: true }; });
+    store.save(); jumpBtn.textContent = 'Done ✓';
+  };
+  const extend = h('button', { class: 'pbtn' }, 'Allow more play today');
+  extend.onclick = () => { store.extendToday(); extend.textContent = 'Done ✓'; };
+  const resetBtn = h('button', { class: 'pbtn danger' }, 'Reset all progress');
+  let resetArm = false;
+  resetBtn.onclick = () => {
+    if (!resetArm) { resetArm = true; resetBtn.textContent = 'Tap again to erase everything'; return; }
+    store.reset(); mapScreen();
+  };
+
+  const el = h('div', { class: 'parent' },
+    h('div', { class: 'p-head' }, h('button', { class: 'pbtn', onclick: mapScreen }, '← Back to the game'), h('h2', {}, 'Grown-ups')),
+    h('div', { class: 'p-grid' },
+      pcard('Progress',
+        h('p', {}, h('b', {}, `${Object.keys(s.done).length} of ${LESSONS.length}`), ' lessons done. Next up: ', h('b', {}, `${L.id} (${L.g.length ? L.g.join(', ') : 'review'})`)),
+        h('p', {}, 'Recent accuracy: ', h('b', {}, acc + '%'), ' — the game adjusts difficulty to keep this near 85%.'),
+        h('p', {}, 'Played today: ', h('b', {}, Math.round(store.minutesToday()) + ' min'), `. Books read: ${s.books.length}. Wordlings: ${s.wordlings.length}.`)),
+      pcard('Sounds (tap to hear)',
+        h('div', { class: 'snd-grid' }, sounds),
+        h('p', { class: 'legend' }, h('i', { class: 'snd m-1' }), 'not seen ', h('i', { class: 'snd m0' }), 'learning ', h('i', { class: 'snd m2' }), 'getting there ', h('i', { class: 'snd m4' }), 'secure')),
+      pcard('Worth practising together',
+        conf.length ? h('p', {}, 'Mix-ups: ', conf.map(([k, n]) => { const [a, b] = k.split('|'); return h('span', { class: 'chip' }, `heard ${a}, picked ${b} ×${n}`); })) : h('p', {}, 'No repeated mix-ups yet.'),
+        weakWords.length ? h('p', {}, 'Tricky words: ', weakWords.map(w => h('span', { class: 'chip' }, w))) : null,
+        h('p', { class: 'tip' }, 'Tip: after each story, ask your child to read it to you again. Re-reading builds fluency.')),
+      pcard('Settings',
+        h('label', {}, 'Daily play limit ', limitSel),
+        h('label', {}, music, ' Background music'),
+        h('div', { class: 'p-row' }, extend),
+        h('label', {}, 'Already reading? Skip ahead to ', jumpSel), jumpBtn,
+        h('div', { class: 'p-row' }, resetBtn)),
+      pcard('How Wordwild teaches',
+        h('p', {}, 'Systematic synthetic phonics: a few sounds at a time, blending them into words, then reading short books that use only the sounds already taught — no guessing from pictures.'),
+        h('p', {}, 'Each lesson: review → new sound → pop, blend, build and “teach Pip” games → a decodable story → a Wordling egg. Sounds and words come back for review on a spaced schedule.')),
+    ));
+  show('parent', el);
+}
+function pcard(title, ...kids) { return h('div', { class: 'pcard' }, h('h3', {}, title), ...kids); }
+
+// ================================================================ Boot
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+titleScreen();
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+window.__ww = { store, mapScreen, startLesson, hatchScreen, LESSONS };
