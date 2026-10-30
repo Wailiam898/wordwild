@@ -69,7 +69,7 @@ returns jsonb language plpgsql security definer set search_path = public as $$
 declare k text := public.ww_key(p_name); st text; cur bigint;
 begin
   if char_length(k) < 2 or char_length(k) > 32 then raise exception 'bad name'; end if;
-  if p_pin is null or char_length(p_pin) < 4 or char_length(p_pin) > 64 then raise exception 'bad code'; end if;
+  if p_pin is null or char_length(p_pin) < 4 or char_length(p_pin) > 100 then raise exception 'bad code'; end if;
   if pg_column_size(p_data) > 2000000 then raise exception 'save too large'; end if;
   st := public.ww_auth(k, p_pin);
   if st = 'none' then
@@ -92,7 +92,7 @@ create or replace function public.ww_set_pin(p_name text, p_pin text, p_new text
 returns boolean language plpgsql security definer set search_path = public as $$
 declare k text := public.ww_key(p_name);
 begin
-  if p_new is null or char_length(p_new) < 4 or char_length(p_new) > 64 then return false; end if;
+  if p_new is null or char_length(p_new) < 4 or char_length(p_new) > 100 then return false; end if;
   if public.ww_auth(k, p_pin) <> 'ok' then return false; end if;
   update public.ww_saves set pin_hash = p_new where name_key = k;
   return true;
