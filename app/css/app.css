@@ -117,6 +117,10 @@ canvas.fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-even
 @keyframes logoBob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-12px) rotate(2deg); } }
 .title-pip { width: clamp(160px, 34vmin, 320px); height: clamp(160px, 34vmin, 320px); z-index: 2; }
 .title .play { z-index: 2; animation: playPulse 1.4s ease-in-out infinite; }
+.credits-link { position: absolute; left: calc(var(--safe-l, 0px) + 12px); bottom: calc(var(--safe-b) + 10px); z-index: 3;
+  font: 600 13px/1 Fredoka, sans-serif; color: rgba(255,255,255,.92); background: rgba(40,30,90,.28); padding: 8px 12px; border-radius: 12px; }
+.credits .credit { line-height: 1.55; overflow-wrap: anywhere; }
+.credits a { color: var(--purple-d); }
 @keyframes playPulse { 0%,100% { scale: 1; } 50% { scale: 1.08; } }
 
 /* ---------- HUD / dock ---------- */

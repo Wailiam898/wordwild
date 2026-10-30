@@ -47,6 +47,7 @@ function titleScreen() {
     h('div', { class: 'isle isle1' }), h('div', { class: 'isle isle2' }),
     h('h1', { class: 'logo' }, ...[...'Wordwild'].map((c, i) => h('span', { style: { '--i': i } }, c))),
     pip, play,
+    h('button', { class: 'credits-link', onclick: () => creditsScreen(titleScreen) }, 'Credits & licences'),
   );
   let starting = false;
   onTap(play, async () => {
@@ -581,10 +582,37 @@ function parentScreen() {
       pcard('How Wordwild teaches',
         h('p', {}, 'Systematic synthetic phonics: a few sounds at a time, blending them into words, then reading short books that use only the sounds already taught — no guessing from pictures.'),
         h('p', {}, 'Each lesson: review → new sound → pop, blend, build and “teach Pip” games → a decodable story → a Wordling egg. Sounds and words come back for review on a spaced schedule.')),
+      pcard('Credits & licences',
+        h('p', {}, 'The letter sounds are recordings from Literacy Hub (© Commonwealth of Australia), used under CC BY 4.0.'),
+        h('button', { class: 'pbtn', onclick: () => creditsScreen(parentScreen) }, 'Credits & licences')),
     ));
   show('parent', el);
 }
 function pcard(title, ...kids) { return h('div', { class: 'pcard' }, h('h3', {}, title), ...kids); }
+
+// ================================================================ Credits & licences
+// Keep in step with app/THIRD_PARTY_NOTICES.md (tests/credits.py checks they match).
+const link = url => h('a', { href: url, target: '_blank', rel: 'noopener' }, url);
+function creditsScreen(back) {
+  stopSpeech();
+  const el = h('div', { class: 'parent credits' },
+    h('div', { class: 'p-head' }, h('button', { class: 'pbtn', onclick: back }, '← Back'), h('h2', {}, 'Credits & licences')),
+    h('div', { class: 'p-grid' },
+      pcard('Letter sounds',
+        h('p', { class: 'credit' },
+          'Phonics audio adapted from “Phonemes and graphemes daily review”, Literacy Hub, © Commonwealth of Australia.', h('br'),
+          'Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0).', h('br'),
+          'Source: ', link('https://www.literacyhub.edu.au/search/phonemes-and-graphemes-daily-review'), h('br'),
+          'Licence: ', link('https://creativecommons.org/licenses/by/4.0/'), h('br'),
+          'Changes: Audio extracted from the original PowerPoint presentation. Converted from M4A (AAC) to MP3 and from stereo (identical channels) to mono, trimmed leading/trailing silence and stray breath noise, added short fades over the trimmed silence, and adjusted volume.', h('br'),
+          'No endorsement by the original publisher or copyright owner is implied.'),
+        h('p', { class: 'tip' }, 'This licence covers only the letter-sound recordings, not the rest of Wordwild. ',
+          h('a', { href: 'THIRD_PARTY_NOTICES.md', target: '_blank', rel: 'noopener' }, 'Notices file'), ' · ',
+          h('a', { href: 'licences/literacyhub-audio-manifest.json', target: '_blank', rel: 'noopener' }, 'Clip-by-clip details'))),
+      pcard('Everything else',
+        h('p', {}, 'All other speech (words, stories and Pip) is synthesised for Wordwild.'))));
+  show('credits', el);
+}
 
 // ================================================================ Boot
 document.addEventListener('gesturestart', e => e.preventDefault());
@@ -598,4 +626,4 @@ if (store.state().name && store.state().cloud) {
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-window.__ww = { store, mapScreen, startLesson, hatchScreen, LESSONS };
+window.__ww = { store, mapScreen, startLesson, hatchScreen, parentScreen, creditsScreen, LESSONS };

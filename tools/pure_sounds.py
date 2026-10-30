@@ -14,7 +14,11 @@ an "n" ends and the vowel starts, where a hiss stops, where voicing begins).
 Stretchy sounds are then held by looping their steady middle.
 A phoneme recogniser checks each result has no vowel attached.
 
-Usage: .venv/Scripts/python.exe -I tools/pure_sounds.py
+RETIRED (30 Oct 2026): the game now uses real recordings from Literacy Hub, installed by
+tools/import_literacyhub.py. This script would overwrite them, so it refuses to run
+unless given --overwrite-recordings.
+
+Usage: .venv/Scripts/python.exe -I tools/pure_sounds.py --overwrite-recordings
 """
 import sys, asyncio, subprocess, json
 from pathlib import Path
@@ -24,6 +28,9 @@ import edge_tts
 
 sys.stdout.reconfigure(encoding="utf-8")
 ROOT = Path(__file__).resolve().parent.parent
+if (ROOT / "app/licences/literacyhub-audio-manifest.json").exists() and "--overwrite-recordings" not in sys.argv:
+    sys.exit("app/audio/p_*.mp3 are Literacy Hub recordings (see THIRD_PARTY_NOTICES.md). "
+             "Pass --overwrite-recordings to replace them with generated sounds.")
 OUT = ROOT / "app" / "audio"
 WAV = ROOT / "work" / "wav"
 SRC = ROOT / "work" / "pure_src"
