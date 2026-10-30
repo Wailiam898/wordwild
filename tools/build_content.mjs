@@ -107,7 +107,7 @@ lessons.forEach(l => {
     word(w);
     add('pw_' + w, { voice: 'pip', text: w });
     (variants[w] || []).forEach(v => {
-      if (!items.has('pw_' + v.w)) add('pw_' + v.w, { voice: 'pip', phoneme: ipaOf(segment(v.w)), word: true });
+      if (!items.has('pw_' + v.w)) add('pw_' + v.w, { voice: 'pip', phoneme: ipaOf(segment(v.w)), word: true, word_text: v.w });
     });
   });
   l.heart.forEach(word);

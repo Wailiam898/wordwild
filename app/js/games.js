@@ -1,6 +1,6 @@
 // The activities. Each takes a game context G and resolves with { right, total }.
 // G = { stage, setReplay(fn), known: {g,h}, pool: [{w,e,seg}], gem(el,n), first(key) }
-import { GRAPHEMES, HEART, STORIES } from './data.js';
+import { GRAPHEMES, HEART, STORIES, STRETCHY, BOUNCY } from './data.js';
 import { VARIANTS } from './variants.js';
 import { say, tap, sfx, clipDuration, load } from './audio.js';
 import { h, onTap, sleep, shuffle, pick, anim, praise, oops, burstAt, confetti } from './ui.js';
@@ -51,7 +51,8 @@ export async function meet(G, g) {
   G.setReplay(intro);
   await intro();
   anim(crystal, 'glow', 2400);
-  await say('n_intro_say', 350, P(g), 700, P(g));
+  const how = STRETCHY.has(g) ? ['n_intro_stretchy', 300] : BOUNCY.has(g) ? ['n_intro_bouncy', 300] : [];
+  await say(...how, 'n_intro_say', 350, P(g), 700, P(g));
   await sleep(500);
 
   // Find it.

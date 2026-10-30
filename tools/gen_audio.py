@@ -1,8 +1,7 @@
 """Render work/manifest.json to app/audio/*.mp3 with the local Kokoro model.
 
-Narrator: af_heart (Kokoro's clearest voice) speaking British-English phonemes,
-so vowels are non-rhotic like Australian English ("car" without the r).
-Pip: af_bella, pitched up so it sounds like a small creature.
+Narrator: Natasha (Microsoft en-AU neural voice, via edge-tts): an Australian accent.
+Pip: the same voice pitched up so it sounds like a small creature.
 
 Every word and sentence is checked with Whisper. If a take isn't understood,
 other candidate voices/speeds are tried and the first one that passes is kept;
@@ -15,31 +14,31 @@ import sys, json, hashlib, subprocess, re
 from pathlib import Path
 import numpy as np
 import soundfile as sf
-import kokoro_onnx
+import asyncio
+import edge_tts
 from faster_whisper import WhisperModel
 
 sys.stdout.reconfigure(encoding="utf-8")
 ROOT = Path(__file__).resolve().parent.parent
-MODEL = "C:/Users/WH/.cache/hyperframes/tts/models/kokoro-v1.0.onnx"
-VOICES = "C:/Users/WH/.cache/hyperframes/tts/voices/voices-v1.0.bin"
 OUT = ROOT / "app" / "audio"
 WAV = ROOT / "work" / "wav"
 CACHE = ROOT / "work" / "audio_cache.json"
 FLAGS = ROOT / "work" / "audio_flags.json"
-VERSION = "v4"
+VERSION = "au1"
 SR = 24000
 PIP_PITCH = 1.32
 
-# (voice, lang, speed) candidates, best first.
-NARR_WORD = [("af_heart", "en-gb", 0.9), ("af_heart", "en-gb", 1.0), ("af_bella", "en-gb", 0.9),
-             ("bf_emma", "en-gb", 0.9), ("af_heart", "en-us", 0.9)]
-NARR_SENT = [("af_heart", "en-gb", 0.92), ("af_heart", "en-gb", 1.0), ("af_bella", "en-gb", 0.92)]
-NARR_LINE = [("af_heart", "en-gb", 1.0)]
-PIP_WORD = [("af_bella", "en-gb", 0.95), ("af_bella", "en-gb", 1.05), ("af_heart", "en-gb", 0.95)]
-PIP_LINE = [("af_bella", "en-gb", 1.05)]
+# (voice, rate, pitch) candidates, best first. Australian neural voices via edge-tts.
+NAT, WIL = "en-AU-NatashaNeural", "en-AU-WilliamMultilingualNeural"
+NARR_WORD = [(NAT, "-10%", "+0Hz"), (NAT, "-20%", "+0Hz"), (NAT, "+0%", "+0Hz"), (WIL, "-10%", "+0Hz")]
+NARR_SENT = [(NAT, "-12%", "+0Hz"), (NAT, "-5%", "+0Hz"), (NAT, "-20%", "+0Hz")]
+NARR_LINE = [(NAT, "+0%", "+0Hz")]
+# Pip: only a small pitch lift. Bigger lifts made words unclear ("pot" heard as "put"),
+# and the child has to judge whether Pip read the word right.
+PIP_WORD = [(NAT, "-10%", "+15Hz"), (NAT, "-18%", "+15Hz"), (NAT, "-5%", "+10Hz")]
+PIP_LINE = [(NAT, "+0%", "+20Hz")]
 # Wider search used on a second pass for clips that failed (--retry-flags).
-EXTRA = [(v, l, sp) for v in ("af_heart", "af_bella", "af_nicole", "af_sarah", "bf_emma", "bf_isabella")
-         for l in ("en-gb", "en-us") for sp in (0.85, 1.0)]
+EXTRA = [(v, r, p) for v in (NAT, WIL) for r in ("-25%", "-15%", "+0%", "+10%") for p in ("+0Hz", "+20Hz")]
 # Words that sound identical; hearing either spelling is a pass.
 HOMOPHONES = {"fin": "finn", "mail": "male", "bee": "be", "high": "hi", "sort": "sought", "sam": "sam"}
 RUDE = {"fuck", "fucking", "shit", "suck", "sucks", "dick", "cock", "piss", "bitch", "ass", "arse", "crap", "damn", "hell"}
@@ -52,13 +51,28 @@ retry = "--retry-flags" in args
 # For r-words like "car" whose correct Australian/British form an American-trained checker mishears.
 plain = set(args[args.index("--plain") + 1].split(",")) if "--plain" in args else set()
 
-k = kokoro_onnx.Kokoro(MODEL, VOICES)
 wm = WhisperModel("small.en", device="cpu", compute_type="int8")
 OUT.mkdir(parents=True, exist_ok=True)
 WAV.mkdir(parents=True, exist_ok=True)
 cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
 flags = json.loads(FLAGS.read_text(encoding="utf-8")) if FLAGS.exists() else {}
 NUM = {"10": "ten", "6": "six"}
+
+
+def tts(text, cand):
+    """Synthesise with edge-tts and decode to float32 mono at SR."""
+    voice, rate, pitch = cand
+    tmp = WAV / "_tmp.mp3"
+    for attempt in range(4):
+        try:
+            asyncio.run(edge_tts.Communicate(text, voice, rate=rate, pitch=pitch).save(str(tmp)))
+            break
+        except Exception:
+            if attempt == 3:
+                raise
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", str(tmp), "-ac", "1", "-ar", str(SR), "-f", "f32le", "-"],
+                         capture_output=True, check=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout
+    return np.frombuffer(raw, np.float32).copy()
 
 
 def norm(s):
@@ -121,8 +135,6 @@ def finish(a):
 
 def encode(wav_path, mp3_path, pip):
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav_path)]
-    if pip:
-        cmd += ["-af", f"asetrate={int(SR * PIP_PITCH)},aresample={SR},atempo={1 / PIP_PITCH * 1.1:.4f}"]
     cmd += ["-ac", "1", "-ar", str(SR), "-c:a", "libmp3lame", "-b:a", "56k", str(mp3_path)]
     subprocess.run(cmd, check=True, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
 
@@ -130,10 +142,9 @@ def encode(wav_path, mp3_path, pip):
 def render(it):
     """Returns (audio, candidate, heard, ok)."""
     iid, pip = it["id"], it["voice"] == "pip"
-    if it.get("phoneme") is not None:  # Pip's made-up mistake words
-        v, lang, sp = PIP_WORD[0]
-        a, _ = k.create(it["phoneme"], voice=v, speed=sp, lang=lang, is_phonemes=True)
-        return finish(np.asarray(a, np.float32)), PIP_WORD[0], "", True
+    if it.get("phoneme") is not None:  # Pip's made-up mistake words: say the spelling
+        a = tts(it["word_text"] + ".", PIP_WORD[0])
+        return finish(a), PIP_WORD[0], "", True
     text = it["text"]
     if iid.startswith("w_"):
         cands = NARR_WORD
@@ -151,10 +162,7 @@ def render(it):
         cands = cands + [c for c in EXTRA if c not in cands]
     first = None
     for c in cands:
-        if "r" in text.lower() and c[1] == "en-us" and iid.startswith(("w_", "pw_")) and not retry:
-            continue  # keep r-controlled words non-rhotic
-        a, _ = k.create(say, voice=c[0], speed=c[2], lang=c[1])
-        a = finish(np.asarray(a, np.float32))
+        a = finish(tts(say, c))
         if not check:
             return a, c, "", True
         heard = hear(a)

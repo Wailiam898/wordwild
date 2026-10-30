@@ -326,6 +326,8 @@ export const LINES = {
   intro_this: 'This sound is',
   intro_like: 'like in',
   intro_say: 'Say it with me!',
+  intro_stretchy: 'It’s a stretchy sound. Make it long!',
+  intro_bouncy: 'It’s a bouncy sound. Keep it short!',
   intro_find: 'Can you find it?',
   pop_go: 'Pop the bubbles that say',
   pop_more: 'Now pop',
@@ -376,6 +378,10 @@ export const PIP_LINES = {
   wow: 'Woohoo!',
   egg: 'An egg! What’s inside?',
 };
+
+// How the sound is said: held ("mmm") or short and crisp ("t"), never with an added "uh".
+export const STRETCHY = new Set(['s', 'ss', 'f', 'ff', 'sh', 'th', 'z', 'zz', 'v', 'm', 'n', 'l', 'll', 'r', 'ng']);
+export const BOUNCY = new Set(['p', 't', 'k', 'c', 'ck', 'b', 'd', 'g', 'ch', 'j', 'h', 'x', 'qu']);
 
 export const PRAISE = Array.from({ length: 12 }, (_, i) => 'praise' + (i + 1));
 export const OOPS = ['oops1', 'oops2', 'oops3', 'oops4'];
