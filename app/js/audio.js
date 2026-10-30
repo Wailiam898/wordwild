@@ -91,6 +91,7 @@ export async function say(...seq) {
   for (const item of seq.flat()) {
     if (token !== speechToken) return false;
     if (typeof item === 'number') { await wait(item); continue; }
+    if (!item) continue;
     const buf = await load(item);
     if (token !== speechToken) return false;
     if (buf) await playBuffer(buf);
@@ -102,7 +103,7 @@ export async function say(...seq) {
 
 // Plays without cancelling current speech (e.g. tapping letters quickly).
 export async function tap(id) {
-  if (!ctx) return;
+  if (!ctx || !id) return;
   const buf = await load(id);
   if (buf) {
     activeSources.forEach(s => { try { s.stop(); } catch (e) {} });
@@ -171,6 +172,9 @@ const SCALES = {
   jungle:  { root: 57, bpm: 112, prog: [0, 3, 5, 7] },
   volcano: { root: 55, bpm: 100, prog: [0, 5, 3, 7] },
   caves:   { root: 62, bpm: 92,  prog: [0, 7, 5, 3] },
+  clouds:  { root: 65, bpm: 96,  prog: [0, 5, 7, 3] },
+  reef:    { root: 58, bpm: 108, prog: [0, 3, 7, 5] },
+  space:   { root: 63, bpm: 88,  prog: [0, 7, 3, 5] },
   title:   { root: 60, bpm: 100, prog: [0, 5, 3, 7] },
 };
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16];

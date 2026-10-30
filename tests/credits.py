@@ -82,7 +82,7 @@ try:
         buttons = page.locator(".snd-grid button.snd")
         wrong = []
         for i in range(buttons.count()):
-            g = buttons.nth(i).inner_text().strip()
+            g = buttons.nth(i).get_attribute("data-g")
             before = len(reqs)
             buttons.nth(i).click()
             page.wait_for_timeout(250)

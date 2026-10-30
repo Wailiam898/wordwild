@@ -48,7 +48,28 @@ export const GRAPHEMES = {
   ur:  { ipa: 'ɜː', v: 1, key: 'turtle',   e: '🐢' },
   ow:  { ipa: 'aʊ', v: 1, key: 'cow',      e: '🐄' },
   oi:  { ipa: 'ɔɪ', v: 1, key: 'coin',     e: '🪙' },
+  // y at the end of a word: y2 says ee (happy), y3 says igh (fly). Both are written y.
+  y2:  { ipa: 'iː', v: 1, key: 'happy',    e: '😄' },
+  ay:  { ipa: 'eɪ', v: 1, key: 'play',     e: '🛝' },
+  ou:  { ipa: 'aʊ', v: 1, key: 'cloud',    e: '☁️' },
+  ea:  { ipa: 'iː', v: 1, key: 'leaf',     e: '🍃' },
+  ie:  { ipa: 'aɪ', v: 1, key: 'pie',      e: '🥧' },
+  y3:  { ipa: 'aɪ', v: 1, key: 'fly',      e: '🪰' },
+  oy:  { ipa: 'ɔɪ', v: 1, key: 'boy',      e: '👦' },
+  ir:  { ipa: 'ɜː', v: 1, key: 'bird',     e: '🐦' },
+  er:  { ipa: 'ɜː', v: 1, key: 'fern',     e: '🌿' },
+  aw:  { ipa: 'ɔː', v: 1, key: 'paw',      e: '🐾' },
+  ew:  { ipa: 'juː', v: 1, key: 'stew',    e: '🍲' },
+  // Split vowels: cake is c, a_e, k, then a silent e (the token '_e').
+  a_e: { ipa: 'eɪ', v: 1, key: 'cake',     e: '🎂' },
+  i_e: { ipa: 'aɪ', v: 1, key: 'bike',     e: '🚲' },
+  o_e: { ipa: 'əʊ', v: 1, key: 'bone',     e: '🦴' },
+  u_e: { ipa: 'juː', v: 1, key: 'cube',    e: '🧊' },
+  wh:  { ipa: 'w',  v: 0, key: 'whale',    e: '🐋' },
+  ph:  { ipa: 'f',  v: 0, key: 'dolphin',  e: '🐬' },
 };
+export const SILENT_E = '_e';
+export const isSplit = g => g.length === 3 && g.endsWith('_e');
 
 // Heart words: the tricky letters (index range) get a heart.
 export const HEART = {
@@ -73,6 +94,27 @@ export const HEART = {
   said: { tricky: [1, 3] },
   has:  { tricky: [2, 3] },
   his:  { tricky: [2, 3] },
+  do:   { tricky: [1, 2] },
+  have: { tricky: [3, 4] },
+  some: { tricky: [1, 4] },
+  come: { tricky: [1, 4] },
+  one:  { tricky: [0, 3] },
+  were: { tricky: [1, 4] },
+  there:{ tricky: [2, 5] },
+  what: { tricky: [2, 3] },
+  little:{ tricky: [4, 6] },
+  here: { tricky: [1, 4] },
+  love: { tricky: [1, 4] },
+  your: { tricky: [1, 4] },
+  water:{ tricky: [1, 2] },
+  friend:{ tricky: [2, 4] },
+  could:{ tricky: [1, 4] },
+  would:{ tricky: [1, 4] },
+  two:  { tricky: [1, 3] },
+  who:  { tricky: [0, 3] },
+  many: { tricky: [1, 2] },
+  any:  { tricky: [0, 1] },
+  where:{ tricky: [2, 5] },
 };
 
 // Words: "word" or "word:emoji". Emoji words can be used in picture games.
@@ -155,7 +197,118 @@ export const WORLDS = [
         story: 'crown' },
     ],
   },
+  {
+    id: 'clouds', name: 'Cloud Kingdom', theme: 'clouds',
+    lessons: [
+      { id: 'L20', g: [], focus: 'blends: cr, fl, st…', heart: ['do', 'have'],
+        words: 'crab:🦀 drum:🥁 plug:🔌 sled:🛷 swim:🏊 truck:🚚 brush:🪥 clock:🕰️ stop:🛑 clap:👏 grab grin plan glad slip step trip flat',
+        story: 'crab' },
+      { id: 'L21', g: [], focus: 'end blends: nd, mp, st…', heart: ['some', 'come'],
+        words: 'tent:⛺ milk:🥛 gift:🎁 lamp:🪔 hand:✋ mask:🎭 list:📝 skunk:🦨 belt band jump bend lift help best fast lost',
+        story: 'tent' },
+      { id: 'L22', g: [], focus: 'two-part words', heart: ['one', 'were'],
+        words: 'sun|set:🌅 pic|nic:🧺 rab|bit:🐇 kit|ten:🐈 mag|net:🧲 pump|kin:🎃 rock|et:🚀 lap|top:💻 hot|dog:🌭 hel|met:⛑️ den|tist:🦷 zig|zag up|set nap|kin',
+        story: 'rocket' },
+      { id: 'L23', g: ['y2'], heart: ['there', 'what'],
+        words: 'hap|py:😄 pup|py:🐶 bun|ny:🐰 ted|dy:🧸 can|dy:🍬 lolly:🍭 jump|ing:🦘 fish|ing:🎣 sleep|ing:😴 run|ning:🏃 fun|ny silly mud|dy sun|ny',
+        story: 'puppy' },
+      { id: 'L24', review: true, g: [], heart: [],
+        words: 'crab:🦀 drum:🥁 tent:⛺ gift:🎁 milk:🥛 rab|bit:🐇 rock|et:🚀 pump|kin:🎃 hap|py:😄 ted|dy:🧸 truck:🚚 skunk:🦨',
+        story: 'windy' },
+    ],
+  },
+  {
+    id: 'reef', name: 'Coral Reef', theme: 'reef',
+    lessons: [
+      { id: 'L25', g: ['ay', 'ou'], heart: ['little'],
+        words: 'play:🛝 hay:🌾 tray:🍱 spray:🧴 cloud:☁️ mouth:👄 shout:📢 couch:🛋️ snout:🐽 sprout:🌱 day say stay way out loud round found',
+        story: 'cloud' },
+      { id: 'L26', g: ['ea', 'ie', 'y3'], heart: ['here'],
+        words: 'leaf:🍃 tea:🍵 seal:🦭 beach:🏖️ peach:🍑 bean:🫘 pie:🥧 tie:👔 fries:🍟 fly:🪰 sky:🌌 cry:😭 spy:🕵️ eat sea dream dry try',
+        story: 'beach' },
+      { id: 'L27', g: ['oy', 'ir', 'er'], heart: ['love', 'your'],
+        words: 'boy:👦 toy:🧸 oys|ter:🦪 bird:🐦 girl:👧 shirt:👕 skirt:👗 first:🥇 let|ter:✉️ lad|der:🪜 but|ter:🧈 ham|mer:🔨 mon|ster:👾 fern:🌿 en|joy dirt stir',
+        story: 'monster' },
+      { id: 'L28', g: ['aw', 'ew'], heart: ['water', 'friend'],
+        words: 'paw:🐾 saw:🪚 claw:🦞 straw:🥤 prawn:🦐 yawn:🥱 hawk:🦅 draw:✏️ stew:🍲 new:🆕 dew:💧 few jaw lawn crawl',
+        story: 'prawn' },
+      { id: 'L29', review: true, g: [], heart: [],
+        words: 'play:🛝 cloud:☁️ leaf:🍃 seal:🦭 pie:🥧 fly:🪰 boy:👦 bird:🐦 let|ter:✉️ paw:🐾 prawn:🦐 stew:🍲',
+        story: 'reef' },
+    ],
+  },
+  {
+    id: 'space', name: 'Star Station', theme: 'space',
+    lessons: [
+      { id: 'L30', g: ['a_e'], heart: ['could', 'would'],
+        words: 'cake:🎂 cape:🦸 tape:📼 gate:🚧 snake:🐍 plane:✈️ grape:🍇 lake:🏞️ skate:⛸️ game:🎮 made name same shake',
+        story: 'cake' },
+      { id: 'L31', g: ['i_e'], heart: ['two', 'who'],
+        words: 'bike:🚲 kite:🪁 five:5️⃣ nine:9️⃣ slide:🛝 smile:😊 pine:🌲 prize:🏆 lime:🍈 hive:🐝 bite ride hide time like',
+        story: 'bike' },
+      { id: 'L32', g: ['o_e', 'u_e'], heart: ['many', 'any'],
+        words: 'bone:🦴 rope:🪢 home:🏠 cone:🍦 globe:🌍 hole:🕳️ nose:👃 cube:🧊 tube:🧪 mule:🫏 dune:🏜️ cute:🥰 stone note hope tune',
+        story: 'bone' },
+      { id: 'L33', g: ['wh', 'ph'], heart: ['where'],
+        words: 'whale:🐋 wheel:🛞 white:⬜ dol|phin:🐬 el|e|phant:🐘 phone:📱 graph:📈 whisk when which while whip',
+        story: 'whale' },
+      { id: 'L34', review: true, g: [], heart: [],
+        words: 'cake:🎂 snake:🐍 bike:🚲 kite:🪁 bone:🦴 cube:🧊 whale:🐋 phone:📱 home:🏠 smile:😊 plane:✈️ globe:🌍',
+        story: 'stars' },
+    ],
+  },
 ];
+
+// Sentences for the sentence games, decodable at their lesson. "Text.|picture";
+// a leading ! marks a silly sentence (for Silly or Sensible?).
+export const SENTENCES = {
+  L1: ['Pip sits.|🐾', 'Pip taps a tin.|🥫', '!A tin naps.|🥫😴'],
+  L2: ['Sam sat.|👦', 'Dad naps.|👨😴', 'I tap the map.|🗺️', 'Sam and Dad sit.|👨‍👦', '!The map naps.|🗺️😴', '!Dad sits in a tin.|👨🥫'],
+  L3: ['The dog digs.|🐶⛏️', 'Sam got a dog.|👦🐶', 'A pig naps.|🐷😴', '!The pot digs.|🍲⛏️', '!A pot naps on the dog.|🍲🐶'],
+  L4: ['Dad got a map.|👨🗺️', 'The pig digs.|🐷⛏️', 'An ant sat on a pan.|🐜🍳', '!The ant got a pig.|🐜🐷'],
+  L5: ['The cat sat on a mat.|🐱', 'Kim got a sock.|👧🧦', 'A cat can nap.|🐱😴', '!A sock can kick.|🧦🦵', '!The cat can pack.|🐱🎒'],
+  L6: ['Ten ducks sat in the mud.|🦆🟫', 'Dad gets a cup.|👨☕', 'The pup sat up.|🐶⬆️', '!The sun sat in a cup.|☀️☕', '!A nut can get up.|🥜'],
+  L7: ['A hen sat on a bed.|🐔🛏️', 'Rob got a red hat.|👦🎩', 'The bug ran up the rug.|🐛', '!A bus can hop.|🚌', '!The hen got on the bus.|🐔🚌'],
+  L8: ['The frog is on a log.|🐸🪵', 'Ben has a red bell.|👦🔔', 'The doll is in his bag.|🪆👜', '!The hill is in a cup.|⛰️☕', '!A log can huff and puff.|🪵💨'],
+  L9: ['His dog is fat.|🐶', 'The bus is big.|🚌', 'The fan is on.|🪭', '!The sun is in his bag.|☀️👜'],
+  L10: ['She has a jet.|👩✈️', 'He gets wet.|👦💦', 'The vet has a van.|🩺🚐', '!The van can jog.|🚐🏃', '!A web can win.|🕸️🏆'],
+  L11: ['The fox is in a box.|🦊📦', 'We zip the bag.|🤐👜', 'The bug can buzz.|🐛', '!The box can quack.|📦🦆', '!Six yaks sit on me.|🐃'],
+  L12: ['The fish was in a dish.|🐟🍽️', 'We got chips at the shop.|🍟🏪', 'She has a shell.|👩🐚', '!The ship was in a cup.|🚢☕', '!A chick can chop.|🐥🔪'],
+  L13: ['The king can sing.|🤴🎤', 'You can sing a song.|🎵', 'The moth is thin.|🦋', '!A ring can sing.|💍🎤', '!The bath has a wing.|🛁🪽'],
+  L14: ['We had fish and chips.|🐟🍟', 'The king has a ship.|🤴🚢', '!The fox sang to the moth.|🦊🦋'],
+  L15: ['They see a snail.|🐌', 'The bee is on the tree.|🐝🌳', 'A train is in the rain.|🚂🌧️', '!The sheep is in the mail.|🐑📬', '!A tree can wait for a train.|🌳🚂'],
+  L16: ['My goat has a coat.|🐐🧥', 'The light is on at night.|💡🌃', 'A toad sat on the road.|🐸🛣️', '!My boat is in the soap.|⛵🧼', '!A goat can fight the night.|🐐🌃'],
+  L17: ['The car is far.|🚗', 'We are at the zoo.|🦒', 'The moon is up at night.|🌙', '!The shark is in the car.|🦈🚗', '!All the stars are in a jar.|⭐🫙'],
+  L18: ['She can surf.|🏄', 'Her horn is red.|📯', 'Turn the fork.|🍴', '!The corn can surf.|🌽🏄', '!The storm is in her fork.|⛈️🍴'],
+  L19: ['The cow is in the town.|🐄🏘️', 'An owl sat in the tree.|🦉🌳', 'Boil the oil.|🫕', '!The cow has a crown.|🐄👑', '!The coin can hoot.|🪙🦉'],
+  L20: ['The crab is on the sand.|🦀', 'Do you have a drum?|🥁', 'Stop the truck!|🛑🚚', 'We swim in the pond.|🏊', '!The clock can swim.|🕰️🏊', '!A sled can clap.|🛷👏'],
+  L21: ['Some milk is in the cup.|🥛', 'Come and jump!|🦘', 'The ant is in the tent.|🐜⛺', '!A lamp can jump.|🪔', '!The skunk has a mask.|🦨🎭'],
+  L22: ['One rabbit is in the basket.|🐇🧺', 'The kitten has a magnet.|🐈🧲', 'We were at the picnic.|🧺', '!The rocket is in the pumpkin.|🚀🎃', '!A helmet can sing.|⛑️🎤'],
+  L23: ['There is a puppy.|🐶', 'What a funny teddy!|🧸', 'The bunny is jumping.|🐰', '!The lolly is sleeping.|🍭😴', '!A teddy is fishing.|🧸🎣'],
+  L24: ['What is in the basket?|🧺', 'The puppy is swimming in the pond.|🐶🏊', '!The kitten is fishing for a rocket.|🐈🚀'],
+  L25: ['We play out in the sun.|☀️', 'Shout out loud!|📢', 'The pig has a snout.|🐽', '!The couch can shout.|🛋️📢', '!A cloud is in my mouth.|☁️👄'],
+  L26: ['We eat a peach on the beach.|🍑🏖️', 'The seal is in the sea.|🦭', 'Here is my pie.|🥧', 'A fly is in the sky.|🪰', '!The pie can fly.|🥧🪰', '!A seal has a tie.|🦭👔'],
+  L27: ['The boy has a toy.|👦🧸', 'The girl has a bird.|👧🐦', 'Her sister has a letter.|✉️', '!The monster is in my shirt.|👾👕', '!A bird can stir the butter.|🐦🧈'],
+  L28: ['The cat has a paw.|🐱🐾', 'We saw a hawk.|🦅', 'I have a new hat.|🎩', '!The prawn can yawn and draw.|🦐✏️', '!My friend is a straw.|🥤'],
+  L29: ['The boy saw a seal at the beach.|👦🦭', 'My friend has a new toy.|🧸', '!The bird is in the stew.|🐦🍲'],
+  L30: ['I made a cake.|🎂', 'The snake is in the lake.|🐍🏞️', 'The plane is late.|✈️', '!The cake can skate.|🎂⛸️', '!A gate can shake a snake.|🚧🐍'],
+  L31: ['I like my bike.|🚲', 'Five kites are in the sky.|🪁', 'Smile and ride!|😊🚲', '!The bike can smile.|🚲😊', '!Nine limes ride a kite.|🍈🪁'],
+  L32: ['The dog has a bone.|🐶🦴', 'We are at home.|🏠', 'The cube is in the tube.|🧊🧪', '!The mule is in the cone.|🫏🍦', '!A globe has a nose.|🌍👃'],
+  L33: ['The whale is in the sea.|🐋', 'The dolphin can swim.|🐬', 'Where is the white wheel?|🛞', '!An elephant is on the phone.|🐘📱', '!The whale has a whisk.|🐋🥄'],
+  L34: ['The whale and the dolphin play.|🐋🐬', 'I like the white kite.|🪁', '!The snake rides a bike.|🐍🚲'],
+};
+
+// Finish My Sentence: the child picks and spells the last word.
+export const FRAMES = [
+  { id: 'f_got', t: 'I got the', from: 'L3' },
+  { id: 'f_has', t: 'Pip has the', from: 'L8' },
+  { id: 'f_see', t: 'She can see the', from: 'L15' },
+  { id: 'f_saw', t: 'We saw the', from: 'L28' },
+  { id: 'f_like', t: 'I like the', from: 'L31' },
+];
+// Picture words that can't finish "I got the …" (not things).
+export const NOT_THINGS = new Set('sit sip sad mad dig red run hot hug up wet win yes zap see down cry spy happy funny smile shout yawn draw stop clap swim jump nap'.split(' '));
+export const NAMES = new Set('pip sam dad mum kim ben rob josh mark jess max kate mike rex tim'.split(' '));
 
 // Decodable stories. Each page: text + picture (emoji scene). q: comprehension question.
 export const STORIES = {
@@ -295,6 +448,126 @@ export const STORIES = {
     { t: 'The crown is in the town!', pic: '👑🏘️' },
     { t: 'Now the king is glad!', pic: '🤴👑🎉' },
   ], q: { text: 'Who pointed at the coin?', opts: ['🦉', '🐄', '🐐'], a: 0 } },
+  crab: { title: 'Crab and Frog', cover: '🦀', pages: [
+    { t: 'Crab sits on the sand.', pic: '🦀🏖️' },
+    { t: 'Frog hops up with a drum.', pic: '🐸🥁' },
+    { t: 'Do you have a drum? said Frog.', pic: '🐸❓' },
+    { t: 'No, but I can clap! said Crab.', pic: '🦀👏' },
+    { t: 'Frog drums and Crab claps.', pic: '🐸🥁🦀👏' },
+    { t: 'It is a big band!', pic: '🎶🎉' },
+  ], q: { text: 'What did Crab do?', opts: ['👏', '🥁', '🏊'], a: 0 } },
+  tent: { title: 'The Big Tent', cover: '⛺', pages: [
+    { t: 'Come and help! said Mum.', pic: '👩⛺' },
+    { t: 'We set up the tent.', pic: '⛺🔨' },
+    { t: 'Some milk and a gift are in the tent.', pic: '🥛🎁' },
+    { t: 'Jump in! said Mum.', pic: '🦘⛺' },
+    { t: 'The tent bends in the wind.', pic: '⛺🌬️' },
+    { t: 'We sit and sip milk in the tent.', pic: '🥛😊' },
+  ], q: { text: 'What was in the tent?', opts: ['🥛', '🐟', '🚌'], a: 0 } },
+  rocket: { title: 'Rocket Picnic', cover: '🚀', pages: [
+    { t: 'Ben has a rocket.', pic: '👦🚀' },
+    { t: 'Ben and his kitten get in the rocket.', pic: '👦🐈🚀' },
+    { t: 'Up, up, up! It zigzags past the sun.', pic: '🚀☀️' },
+    { t: 'They land on the moon.', pic: '🚀🌙' },
+    { t: 'One picnic basket. Yum!', pic: '🧺😋' },
+    { t: 'The kitten naps in the basket.', pic: '🐈🧺😴' },
+  ], q: { text: 'Where did the rocket land?', opts: ['🌙', '🌳', '🏪'], a: 0 } },
+  puppy: { title: 'Silly Puppy', cover: '🐶', pages: [
+    { t: 'There is a puppy in the mud.', pic: '🐶🟫' },
+    { t: 'The puppy is muddy!', pic: '🐶💩' },
+    { t: 'What a silly puppy!', pic: '🐶🤪' },
+    { t: 'The puppy is jumping and running.', pic: '🐶🏃' },
+    { t: 'Then the puppy is sleeping on my teddy.', pic: '🐶🧸😴' },
+    { t: 'Funny puppy!', pic: '🐶😄' },
+  ], q: { text: 'Where did the puppy sleep?', opts: ['🧸', '🛁', '🚗'], a: 0 } },
+  windy: { title: 'Windy Hill', cover: '🌬️', pages: [
+    { t: 'It is windy on the hill.', pic: '🌬️⛰️' },
+    { t: 'Jess has a red flag.', pic: '👧🚩' },
+    { t: 'The wind tugs the flag.', pic: '🚩💨' },
+    { t: 'Up, up! The flag and Jess lift up!', pic: '👧🚩☁️' },
+    { t: 'Jess lands in a big nest.', pic: '👧🪺' },
+    { t: 'What a trip!', pic: '😄' },
+  ], q: { text: 'What did Jess hold?', opts: ['🚩', '🪁', '🎈'], a: 0 } },
+  cloud: { title: 'Play in the Clouds', cover: '☁️', pages: [
+    { t: 'Max and Pip play out on a cloud.', pic: '👦☁️' },
+    { t: 'They jump up and down.', pic: '⬆️⬇️' },
+    { t: 'They shout out loud.', pic: '📢' },
+    { t: 'A little cloud floats past.', pic: '☁️💨' },
+    { t: 'Stay and play with us! said Max.', pic: '👦☁️' },
+    { t: 'The little cloud stays all day.', pic: '☁️😊' },
+  ], q: { text: 'Who came to play?', opts: ['☁️', '🐶', '🦆'], a: 0 } },
+  beach: { title: 'At the Beach', cover: '🏖️', pages: [
+    { t: 'We go to the beach.', pic: '🏖️' },
+    { t: 'A seal sits in the sea.', pic: '🦭🌊' },
+    { t: 'We eat peach pie.', pic: '🍑🥧' },
+    { t: 'A fly lands on my pie!', pic: '🪰🥧' },
+    { t: 'Fly, fly, fly up in the sky!', pic: '🪰🌤️' },
+    { t: 'Here is a treat for the seal.', pic: '🐟🦭' },
+  ], q: { text: 'What landed on the pie?', opts: ['🪰', '🐦', '🦭'], a: 0 } },
+  monster: { title: 'The Toy Monster', cover: '👾', pages: [
+    { t: 'The boy has a toy monster.', pic: '👦👾' },
+    { t: 'The monster has a red shirt.', pic: '👾👕' },
+    { t: 'His sister has a bird.', pic: '👧🐦' },
+    { t: 'The bird sits on the monster!', pic: '🐦👾' },
+    { t: 'Her bird loves the toy.', pic: '🐦💖' },
+    { t: 'Now the boy and the girl enjoy the toy.', pic: '👦👧😊' },
+  ], q: { text: 'Who sat on the monster?', opts: ['🐦', '👦', '🦪'], a: 0 } },
+  prawn: { title: 'Hawk and Prawn', cover: '🦐', pages: [
+    { t: 'A hawk saw a prawn.', pic: '🦅🦐' },
+    { t: 'The prawn is in the water.', pic: '🦐🌊' },
+    { t: 'The hawk swoops down.', pic: '🦅⬇️' },
+    { t: 'The prawn hid in the weed.', pic: '🦐🌿' },
+    { t: 'The hawk did not get it.', pic: '🦅❌' },
+    { t: 'The prawn has a new friend, a crab.', pic: '🦐🦀' },
+  ], q: { text: 'Where did the prawn hide?', opts: ['🌿', '🏠', '🚗'], a: 0 } },
+  reef: { title: 'Under the Sea', cover: '🐠', pages: [
+    { t: 'Pip and a fish swim to the reef.', pic: '🐠🪸' },
+    { t: 'They see a seal and a prawn.', pic: '🦭🦐' },
+    { t: 'The seal has a toy.', pic: '🦭🧸' },
+    { t: 'Splash! Pip and the seal play.', pic: '💦🦭' },
+    { t: 'Clouds float up high.', pic: '☁️☁️' },
+    { t: 'What a day!', pic: '🌞😄' },
+  ], q: { text: 'What did the seal have?', opts: ['🧸', '🍕', '🎈'], a: 0 } },
+  cake: { title: 'The Big Cake', cover: '🎂', pages: [
+    { t: 'Kate made a cake.', pic: '👧🎂' },
+    { t: 'It was a big cake on a plate.', pic: '🎂🍽️' },
+    { t: 'A snake came to the gate.', pic: '🐍🚧' },
+    { t: 'Can I have some cake? said the snake.', pic: '🐍❓' },
+    { t: 'Kate gave the snake a cake.', pic: '👧🎂🐍' },
+    { t: 'The snake ate it all!', pic: '🐍😋' },
+  ], q: { text: 'Who ate the cake?', opts: ['🐍', '👧', '🐶'], a: 0 } },
+  bike: { title: 'Mike Rides', cover: '🚲', pages: [
+    { t: 'Mike has a red bike.', pic: '👦🚲' },
+    { t: 'He rides it five times.', pic: '🚲5️⃣' },
+    { t: 'He rides past a pine tree.', pic: '🚲🌲' },
+    { t: 'He can see a kite in the sky.', pic: '🪁' },
+    { t: 'Mike smiles.', pic: '😊' },
+    { t: 'I like my bike! said Mike.', pic: '👦🚲💖' },
+  ], q: { text: 'What did Mike see in the sky?', opts: ['🪁', '🚲', '🌲'], a: 0 } },
+  bone: { title: 'The Lost Bone', cover: '🦴', pages: [
+    { t: 'Rex had a bone.', pic: '🐶🦴' },
+    { t: 'He hid it in a hole.', pic: '🐶🕳️' },
+    { t: 'Rex went home.', pic: '🐶🏠' },
+    { t: 'Then Rex dug and dug. No bone!', pic: '🐶😢' },
+    { t: 'A mule saw a bone by a stone.', pic: '🫏🦴🪨' },
+    { t: 'Here it is! said the mule.', pic: '🫏🐶🦴' },
+  ], q: { text: 'Where was the bone?', opts: ['🪨', '🏠', '🍦'], a: 0 } },
+  whale: { title: 'Whale and Elephant', cover: '🐋', pages: [
+    { t: 'A whale and a dolphin play in the sea.', pic: '🐋🐬' },
+    { t: 'An elephant comes to the beach.', pic: '🐘🏖️' },
+    { t: 'She has a phone.', pic: '🐘📱' },
+    { t: 'Splash! The whale sprays her.', pic: '🐋💦🐘' },
+    { t: 'Now the elephant is wet!', pic: '🐘💦' },
+    { t: 'They all smile.', pic: '🐋🐘🐬😊' },
+  ], q: { text: 'Who got wet?', opts: ['🐘', '🐋', '🐬'], a: 0 } },
+  stars: { title: 'Pip and the Stars', cover: '🌟', pages: [
+    { t: 'Pip gets in a rocket.', pic: '🚀' },
+    { t: 'Zoom! Up and up, past the moon.', pic: '🚀🌙' },
+    { t: 'Pip lands on a white star.', pic: '⭐' },
+    { t: 'A cute mule waves at Pip.', pic: '🫏👋' },
+    { t: 'They eat cake and play games.', pic: '🎂🎮' },
+    { t: 'Time to go home! said Pip.', pic: '🏠🌟' },
+  ], q: { text: 'Who waved at Pip?', opts: ['🫏', '🐋', '🐍'], a: 0 } },
 };
 
 // Wordlings: one hatches per lesson. Names are decodable by the time they hatch.
@@ -303,6 +576,9 @@ export const WORDLINGS = {
   L5: 'Kit', L6: 'Pud', L7: 'Bun', L8: 'Fluff', L9: 'Biff',
   L10: 'Jiv', L11: 'Zib', L12: 'Shog', L13: 'Thing', L14: 'Chomp',
   L15: 'Sheen', L16: 'Bright', L17: 'Zoom', L18: 'Burp', L19: 'Boing',
+  L20: 'Frizz', L21: 'Stomp', L22: 'Zigzag', L23: 'Giggly', L24: 'Blimp',
+  L25: 'Sprout', L26: 'Peachy', L27: 'Twirl', L28: 'Squawk', L29: 'Shelly',
+  L30: 'Blaze', L31: 'Spike', L32: 'Zoomer', L33: 'Whizz', L34: 'Starlight',
 };
 
 // Things Pip can wear, bought with gems.
@@ -354,6 +630,32 @@ export const LINES = {
   shop: 'Pick something for Pip to wear!',
   library: 'Pick a book to read again!',
   speed_go: 'Read the word, then tap its picture. Quick!',
+  intro_split: 'This is a split vowel. The e jumps back over a letter and helps the vowel say its name!',
+  intro_y: 'At the end of a word, y can make this sound.',
+  intro_another: 'Here is another way to write this sound!',
+  build_go: 'Put the words in order to make the sentence.',
+  build_done: 'You built a sentence!',
+  silly_q: 'Read it. Is it silly, or does it make sense?',
+  silly_yes: 'That one was silly!',
+  silly_no: 'That one makes sense!',
+  fix_go: 'Pip wrote a sentence, but it has a mistake. Tap the mistake to fix it!',
+  fix_capital: 'A sentence starts with a capital letter.',
+  fix_stop: 'A sentence ends with a full stop.',
+  fix_more: 'There is one more mistake!',
+  dict_listen: 'Listen to the sentence. Then write it!',
+  dict_find: 'Find the word',
+  dict_first: 'The first word needs a capital letter.',
+  dict_end: 'What goes at the end?',
+  dict_read: 'You wrote a sentence! Listen.',
+  finish_go: 'Finish the sentence! Pick a picture.',
+  finish_read: 'Listen to your sentence!',
+  memory_go: 'Find the pairs! Match each word to its picture.',
+  ladder_go: 'Change one sound to make',
+  ladder_pick: 'Which sound do we need?',
+  sort_go: 'Which spelling is in this word?',
+  chop_go: 'Long words have parts. Tap where to chop the word!',
+  chop_read: 'Now read the parts, then the whole word!',
+  the_end: 'You finished every world in Wordwild! You are a super reader!',
   who: 'Who’s playing? Ask a grown-up to type your name.',
   pin_new: 'Make a secret code. Pick four numbers you will remember.',
   pin_again: 'Type it one more time.',
@@ -387,27 +689,73 @@ export const PRAISE = Array.from({ length: 12 }, (_, i) => 'praise' + (i + 1));
 export const OOPS = ['oops1', 'oops2', 'oops3', 'oops4'];
 
 // Helpers shared by the app and the tools.
-const ALL_G = Object.keys(GRAPHEMES).sort((a, b) => b.length - a.length);
+// Plain spellings for longest-match; split vowels and end-of-word y are found by rule.
+const ALL_G = Object.keys(GRAPHEMES).filter(g => !isSplit(g) && !/\d/.test(g)).sort((a, b) => b.length - a.length);
 
+// How a grapheme is shown on its own (a crystal, a bubble) and inside a word (a tile).
+export const label = g => g === SILENT_E ? 'e' : isSplit(g) ? g[0] + '‑e' : g.replace(/\d$/, '');
+export const tileText = g => g === SILENT_E ? 'e' : isSplit(g) ? g[0] : g.replace(/\d$/, '');
+export const spell = seg => seg.map(tileText).join('');
+
+// "word", "word:emoji", "syl|la|bles:emoji".
 export function parseWords(str) {
   return str.trim().split(/\s+/).map(tok => {
-    const [w, e] = tok.split(':');
-    return { w, e: e || null };
+    const [raw, e] = tok.split(':');
+    const syl = raw.split('|');
+    return { w: syl.join(''), e: e || null, syl: syl.length > 1 ? syl : null };
   });
 }
 
+export function parseSentences(id) {
+  return (SENTENCES[id] || []).map((s, k) => {
+    const silly = s.startsWith('!');
+    const [t, pic] = s.replace(/^!/, '').split('|');
+    return { id: `x_${id}_${k}`, t, pic, silly, lesson: id };
+  });
+}
+export const sentenceWords = t => t.replace(/[.?!,]/g, '').split(' ');
+
 // Longest-match segmentation into graphemes, restricted to `allowed` if given.
+// Split vowels (cake = c a_e k _e) and a final y (happy = …y2, fly = …y3) are found
+// first; until they are taught such words are not decodable.
 export function segment(word, allowed) {
+  const w = word.toLowerCase();
+  const ok = g => !allowed || allowed.has(g);
+  const m = w.match(/^(.*[^aeiou]|)([aeiou])(ch|sh|th|[bcdfgklmnprstvz])e$/);
+  if (m && GRAPHEMES[m[2] + '_e']) {
+    if (!ok(m[2] + '_e')) return null;
+    const head = segment(m[1], allowed), mid = segment(m[3], allowed);
+    return head && mid ? [...head, m[2] + '_e', ...mid, SILENT_E] : null;
+  }
+  if (w.length > 1 && w.endsWith('y') && !/[aeiouy]/.test(w[w.length - 2])) {
+    const tok = /[aeiou]/.test(w.slice(0, -1)) ? 'y2' : 'y3';
+    if (!ok(tok)) return null;
+    const head = segment(w.slice(0, -1), allowed);
+    return head ? [...head, tok] : null;
+  }
   const out = [];
   let i = 0;
-  const w = word.toLowerCase();
   while (i < w.length) {
-    const g = ALL_G.find(g => w.startsWith(g, i) && (!allowed || allowed.has(g)));
+    const g = ALL_G.find(g => w.startsWith(g, i) && ok(g));
     if (!g) return null;
     out.push(g);
     i += g.length;
   }
   return out;
+}
+
+// Graphemes in a segmented word, split into its syllables (by letter count).
+export function splitSyllables(seg, syl) {
+  const parts = [];
+  let k = 0;
+  for (const s of syl) {
+    const part = [];
+    let n = 0;
+    while (n < s.length && k < seg.length) { n += tileText(seg[k]).length; part.push(seg[k++]); }
+    if (n !== s.length) return null;
+    parts.push(part);
+  }
+  return k === seg.length ? parts : null;
 }
 
 export function allLessons() {

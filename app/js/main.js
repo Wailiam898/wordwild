@@ -1,4 +1,5 @@
-import { WORLDS, GRAPHEMES, STORIES, WORDLINGS, HATS, LINES, PIP_LINES, parseWords, segment, allLessons, knownAt } from './data.js';
+import { WORLDS, GRAPHEMES, STORIES, WORDLINGS, HATS, LINES, PIP_LINES, FRAMES, NOT_THINGS, NAMES, SILENT_E, isSplit,
+  label, parseWords, parseSentences, sentenceWords, segment, allLessons, knownAt } from './data.js';
 import * as audio from './audio.js';
 import { say, sfx, preload, stopSpeech } from './audio.js';
 import { h, onTap, sleep, shuffle, anim, burstAt, confetti, flyGems, clearFx } from './ui.js';
@@ -76,6 +77,9 @@ const DECOR = {
   jungle: ['🌴', '🦜', '🐒', '🌺', '🍌', '🦋', '🌿', '🐸'],
   volcano: ['🌋', '🔥', '🦖', '🪨', '🌶️', '🦎', '🌋', '🔥'],
   caves: ['💎', '🔮', '🦇', '✨', '🍄', '💎', '🌟', '🔮'],
+  clouds: ['☁️', '🌈', '🎈', '🪁', '🕊️', '☁️', '⭐', '🌤️'],
+  reef: ['🐠', '🪸', '🐙', '🐚', '🦀', '🐡', '🫧', '🐢'],
+  space: ['🚀', '🪐', '⭐', '🌙', '👽', '☄️', '🛸', '🌟'],
 };
 
 function mapScreen() {
@@ -121,9 +125,10 @@ function mapScreen() {
     sec.append(field);
     scroller.append(sec);
   });
+  const allDone = LESSONS.every(L => s.done[L.id]);
   scroller.append(h('section', { class: 'world theme-sky' },
-    h('div', { class: 'world-banner' }, h('span', {}, '🏰'), 'Sky Castle'),
-    h('div', { class: 'coming' }, '☁️ 🏰 ☁️', h('small', {}, 'More worlds coming soon'))));
+    h('div', { class: 'world-banner' }, h('span', {}, '🏆'), 'Super Reader'),
+    h('div', { class: 'coming' }, allDone ? '🏆 🎉 🏆' : '🏆', h('small', {}, allDone ? 'You finished every world!' : 'Finish every world to get here'))));
 
   const settingsBtn = h('button', { class: 'btn round gear', 'aria-label': 'Grown-ups' }, h('span', {}, '⚙️'), h('i', { class: 'hold-ring' }));
   holdToOpen(settingsBtn, parentScreen);
@@ -174,22 +179,71 @@ function holdToOpen(btn, fn) {
 }
 
 // ================================================================ Lesson runner
-function pictureWordsUpTo(i) {
+function wordsUpTo(i) {
   const seen = new Map();
   LESSONS.slice(0, i + 1).forEach((L, k) => {
     const known = knownAt(k);
     parseWords(L.words).forEach(x => {
-      if (x.e && !seen.has(x.w)) seen.set(x.w, { ...x, seg: segment(x.w, known.g) });
+      if (!seen.has(x.w) || (x.e && !seen.get(x.w).e)) seen.set(x.w, { ...x, seg: segment(x.w, known.g), lesson: k });
     });
   });
   return [...seen.values()];
+}
+const pictureWordsUpTo = i => wordsUpTo(i).filter(x => x.e);
+
+// Sentences known by lesson i, newest first.
+function sentencesUpTo(i) {
+  return LESSONS.slice(0, i + 1).reverse().flatMap(L => parseSentences(L.id));
+}
+
+// Word Ladder: a chain of 3 (or 2) words, each one sound away from the last.
+function ladderChain(words, prefer) {
+  const ok = words.filter(x => x.seg && x.seg.length >= 3 && x.seg.length <= 4 && !x.seg.some(g => isSplit(g) || g === SILENT_E));
+  const step = (a, b) => a.w !== b.w && a.seg.length === b.seg.length && a.seg.filter((g, k) => g !== b.seg[k]).length === 1;
+  for (const start of shuffle(ok.filter(x => prefer.has(x.lesson))).concat(shuffle(ok))) {
+    const next = shuffle(ok.filter(x => step(start, x)));
+    for (const b of next) {
+      const c = shuffle(ok.filter(x => x !== start && step(b, x)))[0];
+      if (c) return [start, b, c];
+    }
+    if (next.length) return [start, next[0]];
+  }
+  return null;
+}
+
+// Spelling Detective: one sound with 2-3 known spellings, and words for each.
+function sortRound(words, known, fresh) {
+  const byIpa = {};
+  [...known.g].forEach(g => (byIpa[GRAPHEMES[g].ipa] ||= []).push(g));
+  const groups = Object.values(byIpa).filter(gs => gs.length >= 2)
+    .map(gs => {
+      const ws = {};
+      gs.forEach(g => { ws[g] = words.filter(x => x.seg && x.seg.filter(t => gs.includes(t)).length === 1 && x.seg.includes(g)); });
+      const usable = gs.filter(g => ws[g].length >= 2).slice(0, 3);
+      return { gs: usable, ws, fresh: usable.some(g => fresh.includes(g)) };
+    })
+    .filter(x => x.gs.length >= 2);
+  if (!groups.length) return null;
+  const grp = shuffle(groups.filter(x => x.fresh))[0] || shuffle(groups)[0];
+  const picked = shuffle(grp.gs.flatMap(g => shuffle(grp.ws[g]).slice(0, 2).map(x => ({ ...x, g })))).slice(0, 4);
+  return { group: grp.gs, words: picked, fresh: grp.fresh };
+}
+
+// Dictation: which word gets spelled with sound tiles (the rest are picked).
+function dictationFocus(s, known) {
+  const cands = sentenceWords(s.t).map((w, index) => ({ w: w.toLowerCase(), index }))
+    .filter(x => !known.h.has(x.w) && !NAMES.has(x.w) && x.w.length >= 3)
+    .map(x => ({ ...x, seg: segment(x.w, known.g) }))
+    .filter(x => x.seg && x.seg.length >= 3 && x.seg.length <= 5);
+  const f = shuffle(cands)[0];
+  return f ? { index: f.index, item: { w: f.w, seg: f.seg, e: null } } : null;
 }
 
 function lessonPlan(i) {
   const L = LESSONS[i];
   const known = knownAt(i);
   const prev = i > 0 ? knownAt(i - 1) : { g: new Set(), h: new Set() };
-  const words = parseWords(L.words).map(x => ({ ...x, seg: segment(x.w, known.g) }));
+  const words = parseWords(L.words).map(x => ({ ...x, seg: segment(x.w, known.g), lesson: i }));
   const pics = words.filter(x => x.e);
   const hasNew = x => L.g.some(g => x.seg.includes(g));
   const ordered = [...shuffle(pics.filter(hasNew)), ...shuffle(pics.filter(x => !hasNew(x)))];
@@ -206,21 +260,70 @@ function lessonPlan(i) {
     grp.forEach(g => steps.push(['meet', g]));
     steps.push(['pop', shuffle([...grp, ...grp, ...L.g.slice(0, k)]).slice(0, Math.max(4, grp.length * 2))]);
   }
-  const nb = L.review ? 2 : 3;
+  const nb = 2;
   ordered.slice(0, nb).forEach((w, k) => steps.push(['blast', w, k === 0]));
   if (L.review) steps.push(['speed', shuffle(pics).slice(0, 6)]);
-  const forgeWords = shuffle(ordered.slice(nb).length >= 2 ? ordered.slice(nb) : ordered).slice(0, 2);
+  // Long words: chop them into parts.
+  shuffle(words.filter(w => w.syl)).slice(0, 2).forEach(w => steps.push(['chop', w]));
+  const forgeWords = shuffle(ordered.slice(nb).length >= 2 ? ordered.slice(nb) : ordered).slice(0, L.review ? 2 : 1);
   forgeWords.forEach(w => steps.push(['forge', w]));
   L.heart.forEach((hw, k) => steps.push(['heart', hw, k === 0]));
-  const teach = shuffle(words.filter(w => !w.e)).concat(shuffle(pics)).slice(0, 3);
+
+  // One word game and one sentence game (two in reviews), taking turns across lessons.
+  const all = wordsUpTo(i);
+  const recent = new Set([i, i - 1, i - 2]);
+  const wordGames = [];
+  if (pics.length >= 3) wordGames.push(() => ['memory', shuffle(pics).slice(0, store.level() === 0 ? 3 : 4)]);
+  const chain = i >= 2 && ladderChain(all, recent);
+  if (chain) wordGames.push(() => ['ladder', chain]);
+  const sort = i >= 4 && sortRound(all, known, L.g);
+  if (sort) wordGames.push(() => ['sort', sort.group, sort.words]);
+  const variety = [];
+  // A lesson that adds another spelling of a known sound always gets Spelling Detective.
+  if (sort && sort.fresh) variety.push(['sort', sort.group, sort.words]);
+  else if (wordGames.length) variety.push(wordGames[i % wordGames.length]());
+
+  const sents = sentencesUpTo(i);
+  const sensible = sents.filter(x => !x.silly), silly = sents.filter(x => x.silly);
+  const sentGames = [];
+  if (sensible.length) sentGames.push(() => ['build', sensible.find(x => x.lesson === L.id) || sensible[0]]);
+  if (i >= 2 && silly.length) sentGames.push(() => ['silly', shuffle(silly.slice(0, 4))[0]]);
+  if (i >= 4) {
+    const s = shuffle(sensible.slice(0, 6))[0];
+    const first = sentenceWords(s.t)[0];
+    const canCap = !NAMES.has(first.toLowerCase()) && first !== 'I';
+    const kinds = canCap ? (i >= 19 ? ['cap', 'stop'] : [Math.random() < 0.5 ? 'cap' : 'stop']) : ['stop'];
+    sentGames.push(() => ['fix', s, kinds]);
+  }
+  if (i >= 7) {
+    const short = sensible.filter(x => sentenceWords(x.t).length <= 5).slice(0, 8);
+    const s = short.find(x => x.lesson === L.id) || shuffle(short)[0];
+    if (s) sentGames.push(() => ['dict', s, dictationFocus(s, known)]);
+  }
+  const frames = FRAMES.filter(f => LESSONS.findIndex(x => x.id === f.from) <= i);
+  if (frames.length) {
+    const frame = frames[Math.max(0, frames.length - 1 - Math.floor(Math.random() * 2))];
+    const things = shuffle(pictureWordsUpTo(i).filter(x => !NOT_THINGS.has(x.w) && x.seg.length <= 5));
+    const fresh = things.filter(x => recent.has(x.lesson));
+    const opts = [...fresh, ...things.filter(x => !fresh.includes(x))].slice(0, 3);
+    if (opts.length === 3) sentGames.push(() => ['finish', frame, opts]);
+  }
+  if (sentGames.length) {
+    variety.push(sentGames[i % sentGames.length]());
+    if (L.review && sentGames.length > 1) variety.push(sentGames[(i + 1) % sentGames.length]());
+  }
+
+  const teach = shuffle(words.filter(w => !w.e && !w.syl)).concat(shuffle(pics)).slice(0, 2);
+  steps.push(variety[0]);
   teach.forEach(w => steps.push(['pip', w]));
+  variety.slice(1).forEach(v => steps.push(v));
   if (L.story) steps.push(['story', L.story]);
-  return { L, known, steps };
+  return { L, known, steps: steps.filter(Boolean), all };
 }
 
 async function startLesson(i) {
   if (store.overLimit()) return restScreen();
-  const { L, known, steps } = lessonPlan(i);
+  const { L, known, steps, all } = lessonPlan(i);
   const wd = WORLDS[L.wi];
   const pool = pictureWordsUpTo(i);
 
@@ -228,7 +331,11 @@ async function startLesson(i) {
   const need = ['n_praise1', 'n_oops1'];
   [...known.g].forEach(g => need.push('p_' + g, 'w_' + GRAPHEMES[g].key));
   pool.forEach(p => need.push('w_' + p.w));
-  steps.forEach(s => { if (s[0] === 'pip') need.push('pw_' + s[1].w); });
+  steps.forEach(s => {
+    if (s[0] === 'pip') need.push('pw_' + s[1].w);
+    if (['build', 'silly', 'fix', 'dict'].includes(s[0])) need.push(s[1].id, ...sentenceWords(s[1].t).map(w => 'w_' + w.toLowerCase()));
+    if (s[0] === 'finish') need.push(s[1].id);
+  });
   preload(Object.keys(LINES).map(k => 'n_' + k).concat(Object.keys(PIP_LINES).map(k => 'pl_' + k), need));
 
   const stage = h('div', { class: 'stage' });
@@ -246,7 +353,7 @@ async function startLesson(i) {
 
   let gemsEarned = 0;
   const G = {
-    stage, known, pool,
+    stage, known, pool, words: all, newG: L.g, hat: hatEmoji(),
     setReplay: fn => (replayFn = fn),
     gem: (el, n) => { gemsEarned += n; store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); },
   };
@@ -258,6 +365,7 @@ async function startLesson(i) {
     dots.lastChild.style.left = p * 100 + '%';
     const [type, a, b] = steps[k];
     stage.className = 'stage step-' + type;
+    for (const k in stage.dataset) delete stage.dataset[k];
     G.onExit = null;
     let run;
     if (type === 'pop') run = games.soundPop(G, a);
@@ -268,6 +376,15 @@ async function startLesson(i) {
     else if (type === 'pip') run = games.teachPip(G, a, hatEmoji());
     else if (type === 'speed') run = games.speedRead(G, a);
     else if (type === 'story') run = games.story(G, a, { hat: hatEmoji() });
+    else if (type === 'chop') run = games.chop(G, a);
+    else if (type === 'memory') run = games.memory(G, a);
+    else if (type === 'ladder') run = games.ladder(G, a);
+    else if (type === 'sort') run = games.spellSort(G, a, b);
+    else if (type === 'build') run = games.buildSentence(G, a);
+    else if (type === 'silly') run = games.sillyOrNot(G, a);
+    else if (type === 'fix') run = games.fixIt(G, a, b);
+    else if (type === 'dict') run = games.dictation(G, a, b);
+    else if (type === 'finish') run = games.finishSentence(G, a, b);
     const res = await Promise.race([run, abortP]);
     if (!res || aborted) return;
     right += res.right; total += res.total;
@@ -340,6 +457,7 @@ async function hatchScreen(L, stars, first, gems) {
   store.addWordling(L.id);
   await say('n_egg_meet', 200, 'w_' + name.toLowerCase());
   onTap(wl, () => { anim(wl, 'jump', 700); say('w_' + name.toLowerCase()); });
+  if (L.id === LESSONS[LESSONS.length - 1].id) { confetti(200); sfx('fanfare'); await say('n_the_end'); }
   finishRewards(wrap, gems, wl);
 }
 
@@ -452,13 +570,14 @@ function arcadeScreen() {
     h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()),
     h('div', { class: 'arcade-cards' },
       card('🫧', 'Bubble Blitz', s.best.pop, () => playArcade('pop', doneIdx)),
-      card('🚀', 'Rocket Read', s.best.rocket, () => playArcade('rocket', doneIdx)))));
+      card('🚀', 'Rocket Read', s.best.rocket, () => playArcade('rocket', doneIdx)),
+      card('🃏', 'Memory Match', s.best.memory || 0, () => playArcade('memory', doneIdx)))));
 }
 
 async function playArcade(kind, idx) {
   const known = knownAt(idx);
   const pool = pictureWordsUpTo(idx);
-  const stage = h('div', { class: 'stage step-' + (kind === 'pop' ? 'pop' : 'speed') });
+  const stage = h('div', { class: 'stage step-' + { pop: 'pop', rocket: 'speed', memory: 'memory' }[kind] });
   let replayFn = null;
   const replayBtn = h('button', { class: 'btn round replay' }, '🔊');
   onTap(replayBtn, () => replayFn && replayFn());
@@ -469,16 +588,16 @@ async function playArcade(kind, idx) {
     h('div', { class: 'topbar' }, backBtn(() => { aborted = true; abort(null); G.onExit && G.onExit(); arcadeScreen(); }), h('div', { class: 'hud-spacer' }), gemPill(), replayBtn), stage),
   WORLDS[LESSONS[idx].wi].theme);
   audio.startMusicIfOn();
-  preload([...known.g].map(g => 'p_' + g).concat(pool.map(p => 'w_' + p.w)));
+  preload([...known.g].map(g => 'p_' + g).concat(pool.map(p => 'w_' + p.w), ['n_memory_go']));
   await say('n_arcade_go');
-  const run = kind === 'pop'
-    ? games.soundPop(G, shuffle([...known.g]), { seconds: 60 })
+  const run = kind === 'pop' ? games.soundPop(G, shuffle([...known.g]), { seconds: 60 })
+    : kind === 'memory' ? games.memory(G, shuffle(pool).slice(0, 6))
     : games.speedRead(G, pool, { seconds: 60 });
   const res = await Promise.race([run, abortP]);
   if (!res || aborted) return;
   const s = store.state();
-  const key = kind === 'pop' ? 'pop' : 'rocket';
-  const isBest = res.score > s.best[key];
+  const key = kind;
+  const isBest = res.score > (s.best[key] || 0);
   if (isBest) { s.best[key] = res.score; store.save(); }
   stage.innerHTML = '';
   const go = h('button', { class: 'btn big go' }, '▶');
@@ -498,7 +617,7 @@ function parentScreen() {
   const acc = Math.round(store.accuracy() * 100);
   const sounds = Object.keys(GRAPHEMES).map(g => {
     const m = store.mastery('g:' + g);
-    const b = h('button', { class: 'snd m' + m, title: 'Play sound' }, g);
+    const b = h('button', { class: 'snd m' + m, title: 'Play sound', 'data-g': g }, label(g) + (g === 'y2' ? ' (ee)' : g === 'y3' ? ' (igh)' : ''));
     onTap(b, () => { audio.unlock(); audio.tap('p_' + g); });
     return b;
   });
@@ -508,7 +627,8 @@ function parentScreen() {
   limitSel.onchange = () => { s.settings.limit = +limitSel.value; store.save(); };
   const music = h('input', { type: 'checkbox', checked: s.settings.music ? '' : null });
   music.onchange = () => { s.settings.music = music.checked; store.save(); audio.setMusic(music.checked); };
-  const jumpSel = h('select', {}, ...LESSONS.map((l, i) => h('option', { value: i, selected: i === Math.max(cur, s.unlocked) ? '' : null }, `${l.id} — ${WORLDS[l.wi].name}: ${l.g.length ? l.g.join(' ') : 'review'}`)));
+  const what = l => l.g.length ? l.g.map(label).join(' ') : l.focus || 'review';
+  const jumpSel = h('select', {}, ...LESSONS.map((l, i) => h('option', { value: i, selected: i === Math.max(cur, s.unlocked) ? '' : null }, `${l.id} — ${WORLDS[l.wi].name}: ${what(l)}`)));
   const jumpBtn = h('button', { class: 'pbtn' }, 'Open up to here');
   jumpBtn.onclick = () => {
     const to = +jumpSel.value;
@@ -563,7 +683,7 @@ function parentScreen() {
         h('p', { class: 'tip' }, 'Sign in on any iPad or iPhone with the same name and secret code to carry on from where you left off.'),
         h('div', { class: 'p-row' }, acctBtns), acctMsg),
       pcard('Progress',
-        h('p', {}, h('b', {}, `${Object.keys(s.done).length} of ${LESSONS.length}`), ' lessons done. Next up: ', h('b', {}, `${L.id} (${L.g.length ? L.g.join(', ') : 'review'})`)),
+        h('p', {}, h('b', {}, `${Object.keys(s.done).length} of ${LESSONS.length}`), ' lessons done. Next up: ', h('b', {}, `${L.id} (${what(L)})`)),
         h('p', {}, 'Recent accuracy: ', h('b', {}, acc + '%'), ' — the game adjusts difficulty to keep this near 85%.'),
         h('p', {}, 'Played today: ', h('b', {}, Math.round(store.minutesToday()) + ' min'), `. Books read: ${s.books.length}. Wordlings: ${s.wordlings.length}.`)),
       pcard('Sounds (tap to hear)',
@@ -581,7 +701,8 @@ function parentScreen() {
         h('div', { class: 'p-row' }, resetBtn)),
       pcard('How Wordwild teaches',
         h('p', {}, 'Systematic synthetic phonics: a few sounds at a time, blending them into words, then reading short books that use only the sounds already taught — no guessing from pictures.'),
-        h('p', {}, 'Each lesson: review → new sound → pop, blend, build and “teach Pip” games → a decodable story → a Wordling egg. Sounds and words come back for review on a spaced schedule.')),
+        h('p', {}, 'Each lesson: review → new sound → pop, blend, spell and “teach Pip” games → a word game (memory, word ladder, spelling detective, syllable chop) → a sentence game (build it, silly or sensible, fix it, dictation, finish the sentence) → a decodable story → a Wordling egg. Sounds and words come back for review on a spaced schedule.'),
+        h('p', {}, 'Seven worlds: single sounds, digraphs and long vowels (worlds 1–4); consonant blends, two-part words and y saying “ee” (5); other spellings of vowel sounds such as ay, ou, ea, ie, oy, ir, er, aw and ew (6); split vowels a‑e, i‑e, o‑e, u‑e, plus wh and ph (7).')),
       pcard('Credits & licences',
         h('p', {}, 'The letter sounds are recordings from Literacy Hub (© Commonwealth of Australia), used under CC BY 4.0.'),
         h('button', { class: 'pbtn', onclick: () => creditsScreen(parentScreen) }, 'Credits & licences')),
@@ -604,7 +725,7 @@ function creditsScreen(back) {
           'Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0).', h('br'),
           'Source: ', link('https://www.literacyhub.edu.au/search/phonemes-and-graphemes-daily-review'), h('br'),
           'Licence: ', link('https://creativecommons.org/licenses/by/4.0/'), h('br'),
-          'Changes: Audio extracted from the original PowerPoint presentation. Converted from M4A (AAC) to MP3 and from stereo (identical channels) to mono, trimmed leading/trailing silence and stray breath noise, added short fades over the trimmed silence, and adjusted volume.', h('br'),
+          'Changes: Audio extracted from the original PowerPoint presentation. Converted from M4A (AAC) to MP3 and from stereo (identical channels) to mono, trimmed leading/trailing silence and stray breath noise, kept only the first sound of one recording that says three sounds in a row, added short fades over the trimmed silence, and adjusted volume.', h('br'),
           'No endorsement by the original publisher or copyright owner is implied.'),
         h('p', { class: 'tip' }, 'This licence covers only the letter-sound recordings, not the rest of Wordwild. ',
           h('a', { href: 'THIRD_PARTY_NOTICES.md', target: '_blank', rel: 'noopener' }, 'Notices file'), ' · ',

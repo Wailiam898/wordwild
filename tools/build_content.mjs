@@ -3,8 +3,8 @@
 // Usage: node tools/build_content.mjs
 import { writeFileSync, mkdirSync } from 'node:fs';
 import {
-  GRAPHEMES, HEART, WORLDS, STORIES, WORDLINGS, LINES, PIP_LINES,
-  parseWords, segment, allLessons, knownAt,
+  GRAPHEMES, HEART, WORLDS, STORIES, WORDLINGS, LINES, PIP_LINES, SENTENCES, FRAMES,
+  parseWords, parseSentences, sentenceWords, segment, splitSyllables, spell, isSplit, SILENT_E, allLessons, knownAt,
 } from '../app/js/data.js';
 
 const errors = [];
@@ -28,8 +28,10 @@ lessons.forEach((l, i) => {
   l.g.forEach(g => { if (!GRAPHEMES[g]) errors.push(`${l.id}: unknown grapheme ${g}`); });
   l.heart.forEach(h => { if (!HEART[h]) errors.push(`${l.id}: unknown heart word ${h}`); });
   const emojis = new Set();
-  parseWords(l.words).forEach(({ w, e }) => {
-    if (!segment(w, known.g)) errors.push(`${l.id}: word not decodable: ${w}`);
+  parseWords(l.words).forEach(({ w, e, syl }) => {
+    const seg = segment(w, known.g);
+    if (!seg) errors.push(`${l.id}: word not decodable: ${w}`);
+    else if (syl && !splitSyllables(seg, syl)) errors.push(`${l.id}: syllables ${syl.join('|')} don't fall between sounds (${seg.join(' ')})`);
     if (e) { if (emojis.has(e)) warn.push(`${l.id}: duplicate picture ${e} (${w})`); emojis.add(e); }
   });
   if (emojis.size < 4) errors.push(`${l.id}: needs at least 4 picture words, has ${emojis.size}`);
@@ -42,9 +44,20 @@ lessons.forEach((l, i) => {
     }));
     tokens(st.title).forEach(w => { if (!decodable(w, known)) errors.push(`${l.id} story title: "${w}"`); });
   }
+  parseSentences(l.id).forEach(x => {
+    if (!/[.?!]$/.test(x.t) || !/^[A-Z]/.test(x.t)) errors.push(`${l.id}: sentence needs a capital and an end mark: ${x.t}`);
+    if (!x.pic) errors.push(`${l.id}: sentence has no picture: ${x.t}`);
+    tokens(x.t).forEach(w => { if (w !== 'pip' && !decodable(w, known)) errors.push(`${l.id} sentence: "${w}" not decodable in "${x.t}"`); });
+  });
   const name = WORDLINGS[l.id];
   if (!name) errors.push(`${l.id}: no Wordling`);
   else if (!segment(name.toLowerCase(), known.g)) errors.push(`${l.id}: Wordling name not decodable: ${name}`);
+});
+Object.keys(SENTENCES).forEach(k => { if (!lessons.some(l => l.id === k)) errors.push(`sentences for unknown lesson ${k}`); });
+FRAMES.forEach(f => {
+  const i = lessons.findIndex(l => l.id === f.from);
+  if (i < 0) errors.push(`frame ${f.id}: unknown lesson ${f.from}`);
+  else tokens(f.t).forEach(w => { if (!decodable(w, knownAt(i))) errors.push(`frame ${f.id}: "${w}" not decodable at ${f.from}`); });
 });
 Object.keys(STORIES).forEach(k => { if (!seenStory.has(k)) warn.push(`story ${k} not used by any lesson`); });
 
@@ -65,15 +78,23 @@ lessons.forEach((l, i) => {
     const seg = segment(w, known.g);
     const out = [];
     const h = hash(w);
-    for (let k = 0; k < seg.length && out.length < 2; k++) {
+    // Split vowel: Pip forgets the magic e (cake -> cak) when the short word is real.
+    const sp = seg.findIndex(isSplit);
+    if (sp >= 0) {
+      const short = seg.filter(g => g !== SILENT_E).map(g => isSplit(g) ? g[0] : g);
+      out.push({ pos: sp, g: seg[sp][0], w: short.join('') });
+    }
+    for (let k = 0; sp < 0 && k < seg.length && out.length < 2; k++) {
       const pos = (h + k * 7) % seg.length;
       const orig = seg[pos];
+      if (orig === SILENT_E || isSplit(orig)) continue;
       const cands = pool.filter(g => g !== orig && GRAPHEMES[g].v === GRAPHEMES[orig].v
-        && GRAPHEMES[g].ipa !== GRAPHEMES[orig].ipa && g.length <= 2);
+        && GRAPHEMES[g].ipa !== GRAPHEMES[orig].ipa && g.length <= 2 && !/\d/.test(g)
+        && !(pos === 0 && ['ng', 'ck'].includes(g)) && g !== seg[pos - 1] && g !== seg[pos + 1]);
       if (!cands.length) continue;
-      const rep = cands[(h >> 3) % cands.length];
+      const rep = cands[((h >> 3) % cands.length + cands.length) % cands.length];
       const v = seg.slice(); v[pos] = rep;
-      if (!out.some(o => o.pos === pos)) out.push({ pos, g: rep, w: v.join('') });
+      if (!out.some(o => o.pos === pos)) out.push({ pos, g: rep, w: spell(v) });
     }
     variants[w] = out;
   });
@@ -88,7 +109,7 @@ const add = (id, o) => { if (!items.has(id)) items.set(id, { id, ...o }); };
 const ipaOf = seg => {
   // Stress mark before the first vowel grapheme.
   let stressed = false;
-  return seg.map(g => {
+  return seg.filter(g => g !== SILENT_E).map(g => {
     const x = GRAPHEMES[g];
     if (x.v && !stressed) { stressed = true; return 'ˈ' + x.ipa; }
     return x.ipa;
@@ -107,12 +128,17 @@ lessons.forEach(l => {
     word(w);
     add('pw_' + w, { voice: 'pip', text: w });
     (variants[w] || []).forEach(v => {
-      if (!items.has('pw_' + v.w)) add('pw_' + v.w, { voice: 'pip', phoneme: ipaOf(segment(v.w)), word: true, word_text: v.w });
+      if (!items.has('pw_' + v.w)) add('pw_' + v.w, { voice: 'pip', phoneme: ipaOf(segment(v.w) || []), word: true, word_text: v.w });
     });
   });
   l.heart.forEach(word);
+  parseSentences(l.id).forEach(x => {
+    add(x.id, { voice: 'narr', text: x.t, slow: true });
+    tokens(x.t).forEach(word);
+  });
   add('w_' + WORDLINGS[l.id].toLowerCase(), { voice: 'narr', text: WORDLINGS[l.id] });
 });
+FRAMES.forEach(f => add(f.id, { voice: 'narr', text: f.t + ' …', frame: true }));
 for (const [k, st] of Object.entries(STORIES)) {
   add(`st_${k}`, { voice: 'narr', text: st.title });
   add(`q_${k}`, { voice: 'narr', text: st.q.text });

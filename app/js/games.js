@@ -1,24 +1,39 @@
 // The activities. Each takes a game context G and resolves with { right, total }.
 // G = { stage, setReplay(fn), known: {g,h}, pool: [{w,e,seg}], gem(el,n), first(key) }
-import { GRAPHEMES, HEART, STORIES, STRETCHY, BOUNCY } from './data.js';
+import { GRAPHEMES, HEART, STORIES, STRETCHY, BOUNCY, NAMES, SILENT_E, isSplit, label, tileText, sentenceWords, splitSyllables } from './data.js';
 import { VARIANTS } from './variants.js';
 import { say, tap, sfx, clipDuration, load } from './audio.js';
 import { h, onTap, sleep, shuffle, pick, anim, praise, oops, burstAt, confetti } from './ui.js';
 import { pipSVG, rocketSVG } from './art.js';
 import * as store from './store.js';
 
-const P = g => 'p_' + g;
+const P = g => g === SILENT_E ? null : 'p_' + g;
 const W = w => 'w_' + w;
 
+// A grapheme inside a word. Split vowels show their vowel letter and the silent e,
+// both in gold so the pair stands out (c a k e).
 function tileEl(g, cls = '') {
-  return h('div', { class: 'tile ' + cls + (g.length > 1 ? ' multi' : '') }, g);
+  const t = tileText(g);
+  const magic = isSplit(g) || g === SILENT_E;
+  const el = h('div', { class: 'tile ' + cls + (t.length > 1 ? ' multi' : '') + (magic ? ' magic' : '') }, t);
+  el.dataset.g = g;
+  return el;
+}
+// A grapheme on its own (a-e, not a).
+function soundEl(g, cls = '') {
+  const t = label(g);
+  const el = h('div', { class: 'tile ' + cls + (t.length > 1 ? ' multi' : '') }, t);
+  el.dataset.g = g;
+  return el;
 }
 
+// Other sounds to choose from: never one that sounds the same or looks the same.
 function otherGraphemes(g, known, n) {
   const ipa = GRAPHEMES[g].ipa;
-  let pool = [...known].filter(x => x !== g && GRAPHEMES[x].ipa !== ipa);
+  const fine = x => x !== g && GRAPHEMES[x].ipa !== ipa && label(x) !== label(g);
+  let pool = [...known].filter(fine);
   if (pool.length < n) {
-    pool = pool.concat(Object.keys(GRAPHEMES).filter(x => x.length === 1 && x !== g && GRAPHEMES[x].ipa !== ipa && !pool.includes(x)));
+    pool = pool.concat(Object.keys(GRAPHEMES).filter(x => x.length === 1 && fine(x) && !pool.includes(x)));
   }
   return shuffle(pool).slice(0, n);
 }
@@ -38,12 +53,16 @@ export async function meet(G, g) {
   const x = GRAPHEMES[g];
   const st = G.stage;
   st.innerHTML = '';
-  const crystal = h('div', { class: 'crystal pop-in' }, h('span', {}, g));
+  const crystal = h('div', { class: 'crystal pop-in' + (label(g).length > 2 ? ' wide' : '') }, h('span', {}, label(g)));
   const pic = h('div', { class: 'meet-pic' }, h('span', { class: 'emoji' }, x.e));
   st.append(h('div', { class: 'meet' }, crystal, pic));
   onTap(crystal, () => { anim(crystal, 'wiggle'); tap(P(g)); });
+  const twin = [...G.known.g].some(o => o !== g && GRAPHEMES[o].ipa === x.ipa && !G.newG?.includes(o));
   const intro = async () => {
     anim(crystal, 'glow', 900);
+    if (isSplit(g)) await say('n_intro_split', 300);
+    else if (g === 'y2' || g === 'y3') await say('n_intro_y', 250);
+    else if (twin) await say('n_intro_another', 250);
     await say('n_intro_this', 250, P(g), 350, 'n_intro_like');
     anim(pic, 'bounce', 700);
     await say(W(x.key), 300, P(g));
@@ -66,7 +85,7 @@ export async function meet(G, g) {
   const ask = () => say('n_intro_find', 200, P(g));
   G.setReplay(ask);
   opts.forEach(o => {
-    const t = tileEl(o, 'bubble-tile pop-in');
+    const t = soundEl(o, 'bubble-tile pop-in');
     if (o === g) t.dataset.ok = 1;
     onTap(t, async () => {
       if (t.classList.contains('locked')) return;
@@ -122,7 +141,8 @@ export function soundPop(G, targets, opts = {}) {
     const onScreen = bubbles.some(b => b.g === target && !b.popped);
     const isT = force || (!onScreen && Math.random() < 0.6) || Math.random() < 0.3;
     const g = isT ? target : pick(otherGraphemes(target, known, 4));
-    const el = h('div', { class: 'bubble' + (g.length > 1 ? ' multi' : '') }, h('span', {}, g));
+    const el = h('div', { class: 'bubble' + (label(g).length > 1 ? ' multi' : '') }, h('span', {}, label(g)));
+    el.dataset.g = g;
     el.style.width = el.style.height = size + 'px';
     const b = { el, g, x: Math.random() * (r.width - size), y: r.height + 10, sp: speedBase * (0.85 + Math.random() * 0.4), wob: Math.random() * 6, size, popped: false };
     el.style.setProperty('--hue', Math.floor(Math.random() * 360));
@@ -230,7 +250,7 @@ export async function blast(G, item, intro) {
 
   const charged = new Promise(resolve => {
     tiles.forEach((t, i) => onTap(t, () => {
-      tap(P(seg[i]));
+      if (seg[i] === SILENT_E) magicE(tiles, seg); else tap(P(seg[i]));
       anim(t, 'boing', 400);
       if (i === next) {
         t.classList.add('lit'); t.classList.remove('next');
@@ -259,7 +279,7 @@ export async function blast(G, item, intro) {
       let i = -1; cs.forEach((c, k) => { if (x >= c - 10) i = k; });
       if (i > lastI) {
         for (let k = lastI + 1; k <= i; k++) { tiles[k].classList.add('blend'); }
-        lastI = i; tap(P(seg[i])); sfx('slide');
+        lastI = i; if (P(seg[i])) tap(P(seg[i])); sfx('slide');
       }
       if (p > 0.96 && lastI === tiles.length - 1 && !finished) { finished = true; dragging = false; resolve(); }
     };
@@ -319,17 +339,21 @@ export async function blast(G, item, intro) {
 }
 
 // ---------------------------------------------------------------- Word forge (spelling)
-export async function forge(G, item) {
+// opts.host: build inside this element instead of the whole stage (dictation, finish).
+export async function forge(G, item, opts = {}) {
   const st = G.stage;
-  st.innerHTML = '';
+  const host = opts.host || st;
+  host.innerHTML = '';
   const seg = item.seg;
   const lvl = store.level();
-  const extra = otherGraphemes(seg[0], G.known.g, 6).filter(g => !seg.includes(g)).slice(0, [1, 2, 3][lvl]);
+  // Split-vowel words also offer the plain vowel, so the child has to choose a vs a-e.
+  const plain = seg.filter(isSplit).map(g => g[0]).filter(g => G.known.g.has(g));
+  const extra = [...plain, ...otherGraphemes(seg.find(g => g !== SILENT_E), G.known.g, 6).filter(g => !seg.includes(g))].slice(0, Math.max(plain.length, [1, 2, 3][lvl]));
   const tray = shuffle([...seg, ...extra]);
   const boxes = seg.map(() => h('div', { class: 'sound-box' }));
-  const pic = h('div', { class: 'forge-pic pop-in' }, h('span', { class: 'emoji' }, item.e));
+  const pic = h('div', { class: 'forge-pic pop-in' + (item.e ? '' : ' ear') }, h('span', { class: 'emoji' }, item.e || '👂'));
   const trayEl = h('div', { class: 'tray' });
-  st.append(h('div', { class: 'forge' }, pic, h('div', { class: 'box-row' }, boxes), trayEl));
+  host.append(h('div', { class: 'forge' + (opts.host ? ' small' : '') }, pic, h('div', { class: 'box-row' }, boxes), trayEl));
   const filled = seg.map(() => null);
   st.dataset.seq = seg.join(',');
   const ask = () => say('n_forge_build', 200, W(item.w));
@@ -345,7 +369,7 @@ export async function forge(G, item) {
         if (t.classList.contains('used') || st.classList.contains('busy')) return;
         const slot = filled.indexOf(null);
         if (slot < 0) return;
-        tap(P(g));
+        if (g === SILENT_E) sfx('sparkle'); else tap(P(g));
         filled[slot] = t;
         t.classList.add('used');
         const ghost = tileEl(g, 'placed');
@@ -374,6 +398,8 @@ export async function forge(G, item) {
         burstAt(pic, 30);
         anim(pic, 'bounce', 700);
         await praise();
+        st.classList.remove('busy');
+        delete st.dataset.seq;
         resolve({ right: tries === 0 ? 1 : 0, total: 1 });
         return;
       }
@@ -459,7 +485,7 @@ export async function teachPip(G, item, hat) {
   // Child spotted the mistake: now find the sound.
   sfx('good');
   mood('wow');
-  await say('n_pip_which');
+  say('n_pip_which');
   let tries = 0;
   await new Promise(resolve => {
     G.setReplay(() => say('n_pip_which'));
@@ -605,8 +631,9 @@ export async function story(G, id, opts = {}) {
   const go = h('button', { class: 'btn big go' }, '▶');
   st.append(h('div', { class: 'center-col' }, cover, go));
   G.setReplay(() => say(`st_${id}`));
-  if (!opts.reread) await say('n_story_start', 300, `st_${id}`); else await say(`st_${id}`);
-  await new Promise(r => onTap(go, r));
+  const started = new Promise(r => onTap(go, r));
+  if (!opts.reread) say('n_story_start', 300, `st_${id}`); else say(`st_${id}`);
+  await started;
   sfx('whoosh');
 
   for (let p = 0; p < S.pages.length; p++) {
@@ -680,4 +707,528 @@ export async function story(G, id, opts = {}) {
   store.addBook(id);
   if (!opts.reread) await say('n_story_done');
   return { right, total };
+}
+
+// Tapping the silent e: it zaps its vowel, which then says its name.
+function magicE(tiles, seg) {
+  const v = seg.findIndex(isSplit);
+  sfx('sparkle');
+  tiles[seg.length - 1].classList.add('zap');
+  if (v >= 0) { tiles[v].classList.add('zap'); anim(tiles[v], 'bounce', 600); setTimeout(() => tap(P(seg[v])), 350); }
+}
+
+// ================================================================ Sentence games
+const isMark = t => /^[.?!]$/.test(t);
+const bare = tok => tok.toLowerCase().replace(/[^a-z]/g, '');
+const capFirst = w => w[0].toUpperCase() + w.slice(1);
+const sayTok = tok => { const c = bare(tok); if (c) tap(W(c)); };
+function chipEl(text, cls = '') {
+  return h('div', { class: 'wchip' + (isMark(text) ? ' mark' : '') + (cls ? ' ' + cls : '') }, text);
+}
+// Read a sentence aloud, lighting each word as it goes.
+async function readSentence(id, chips) {
+  await load(id);
+  const dur = clipDuration(id) * 1000;
+  const sum = chips.reduce((a, c) => a + c.textContent.length + 2, 0);
+  let t = 0;
+  const timers = chips.map(c => {
+    const at = t; t += dur * (c.textContent.length + 2) / sum;
+    return setTimeout(() => { chips.forEach(x => x.classList.remove('hl')); c.classList.add('hl'); }, at);
+  });
+  await say(id);
+  timers.forEach(clearTimeout);
+  chips.forEach(x => x.classList.remove('hl'));
+}
+const sentenceLine = s => [...sentenceWords(s.t), s.t.slice(-1)];
+
+// ---------------------------------------------------------------- Sentence Builder
+// Put shuffled word tiles in order to make the sentence for the picture.
+export async function buildSentence(G, s) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const parts = sentenceLine(s);
+  const slots = parts.map(p => h('div', { class: 'slot' + (isMark(p) ? ' mark' : '') }));
+  const line = h('div', { class: 'sent-line' }, slots);
+  const trayEl = h('div', { class: 'tray sent-tray' });
+  const pic = h('div', { class: 'sent-pic pop-in' }, h('span', { class: 'emoji' }, s.pic));
+  st.append(h('div', { class: 'sentence' }, pic, line, trayEl));
+  let order = shuffle(parts);
+  for (let k = 0; k < 4 && order.join(' ') === parts.join(' '); k++) order = shuffle(parts);
+  const els = order.map(p => chipEl(p, 'pop-in'));
+  trayEl.append(...els);
+  const placed = [];
+  let next = 0, tries = 0, wrongHere = 0;
+  const markNext = () => {
+    els.forEach(e => delete e.dataset.ok);
+    const e = els.find(e => !e.classList.contains('used') && e.textContent === parts[next]);
+    if (e) e.dataset.ok = 1;
+    slots.forEach((sl, k) => sl.classList.toggle('next', k === next));
+  };
+  markNext();
+  G.setReplay(() => say(s.id));
+  say('n_build_go');
+  return new Promise(resolve => {
+    els.forEach(el => onTap(el, async () => {
+      if (el.classList.contains('used') || st.classList.contains('busy')) return;
+      const p = el.textContent;
+      if (p === parts[next]) {
+        el.classList.add('used'); el.classList.remove('hint');
+        const chip = chipEl(p);
+        slots[next].append(chip); placed.push(chip);
+        anim(chip, 'drop-in', 400);
+        if (isMark(p)) sfx('pop'); else sayTok(p);
+        next++; wrongHere = 0;
+        markNext();
+        if (next === parts.length) {
+          st.classList.add('busy');
+          await sleep(400);
+          sfx('sparkle');
+          line.classList.add('done');
+          store.record('s:' + s.id, tries === 0);
+          G.gem(line, tries === 0 ? 3 : 1);
+          await readSentence(s.id, placed);
+          await praise();
+          st.classList.remove('busy');
+          resolve({ right: tries === 0 ? 1 : 0, total: 1 });
+        }
+      } else {
+        tries++; wrongHere++;
+        anim(el, 'shake'); sfx('bad');
+        if (!isMark(p)) sayTok(p);
+        if (wrongHere >= 2) els.find(e => e.dataset.ok)?.classList.add('hint');
+      }
+    }));
+  });
+}
+
+// ---------------------------------------------------------------- Silly or Sensible?
+export async function sillyOrNot(G, s) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const chips = sentenceLine(s).map(p => {
+    const c = chipEl(p);
+    if (!isMark(p)) onTap(c, () => { anim(c, 'boing', 400); sayTok(p); });
+    return c;
+  });
+  const pic = h('div', { class: 'sent-pic hidden' }, h('span', { class: 'emoji' }, s.pic));
+  const ok = h('button', { class: 'judge yes', 'aria-label': 'Makes sense' }, '👍');
+  const silly = h('button', { class: 'judge silly', 'aria-label': 'Silly' }, '🤪');
+  (s.silly ? silly : ok).dataset.ok = 1;
+  const row = h('div', { class: 'judge-row' }, ok, silly);
+  st.append(h('div', { class: 'sentence' }, pic, h('div', { class: 'sent-line read' }, chips), row));
+  const ask = () => say('n_silly_q');
+  G.setReplay(ask);
+  ask();
+  const ans = await new Promise(r => { onTap(ok, () => r(false)); onTap(silly, () => r(true)); });
+  row.classList.add('locked');
+  delete (s.silly ? silly : ok).dataset.ok;
+  const right = ans === s.silly;
+  const btn = ans ? silly : ok;
+  btn.classList.add(right ? 'right' : 'wrong');
+  pic.classList.remove('hidden'); anim(pic, 'bounce', 700);
+  store.record('s:' + s.id, right);
+  if (right) { sfx('good'); burstAt(btn, 24); G.gem(btn, 2); }
+  else await oops();
+  await sleep(300);
+  await readSentence(s.id, chips);
+  await say(s.silly ? 'n_silly_yes' : 'n_silly_no');
+  if (right) await praise();
+  return { right: right ? 1 : 0, total: 1 };
+}
+
+// ---------------------------------------------------------------- Fix It!
+// Pip's sentence is missing its capital letter, its full stop, or both.
+export async function fixIt(G, s, kinds) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const parts = sentenceLine(s);
+  const words = parts.slice(0, -1), mark = parts[parts.length - 1];
+  const chips = words.map((w, i) => chipEl(i === 0 && kinds.includes('cap') ? w.toLowerCase() : w, 'tap'));
+  const end = chipEl(kinds.includes('stop') ? '' : mark, 'tap end' + (kinds.includes('stop') ? ' empty' : ''));
+  const all = [...chips, end];
+  const pip = h('div', { class: 'pip-mid', html: pipSVG('talk', G.hat || '') });
+  st.append(h('div', { class: 'sentence' }, h('div', { class: 'fix-top' }, pip, h('div', { class: 'speech pop-in' }, '✏️')),
+    h('div', { class: 'sent-line read paper' }, all)));
+  const todo = new Set(kinds);
+  if (todo.has('cap')) chips[0].dataset.ok = 1;
+  if (todo.has('stop')) end.dataset.ok = 1;
+  let tries = 0;
+  const ask = () => say('n_fix_go');
+  G.setReplay(ask);
+  ask().then(() => { if (pip.isConnected) pip.innerHTML = pipSVG('happy', G.hat || ''); });
+  await new Promise(resolve => {
+    all.forEach((c, i) => onTap(c, async () => {
+      if (st.classList.contains('busy') || c.classList.contains('right')) return;
+      const kind = i === 0 && todo.has('cap') ? 'cap' : c === end && todo.has('stop') ? 'stop' : null;
+      if (!kind) { tries++; anim(c, 'shake'); sfx('bad'); return; }
+      st.classList.add('busy');
+      todo.delete(kind); delete c.dataset.ok;
+      c.classList.add('right'); c.classList.remove('empty');
+      c.textContent = kind === 'cap' ? words[0] : mark;
+      anim(c, 'bounce', 600); burstAt(c, 18); sfx('sparkle');
+      await say(kind === 'cap' ? 'n_fix_capital' : 'n_fix_stop');
+      if (todo.size) await say('n_fix_more');
+      st.classList.remove('busy');
+      if (!todo.size) resolve();
+    }));
+  });
+  store.record('s:' + s.id, tries === 0);
+  G.gem(end, tries === 0 ? 3 : 1);
+  pip.innerHTML = pipSVG('wow', G.hat || ''); anim(pip, 'jump', 700);
+  await readSentence(s.id, all);
+  await praise();
+  return { right: tries === 0 ? 1 : 0, total: 1 };
+}
+
+// ---------------------------------------------------------------- Dictation
+// Hear a sentence, then write it: pick each word (with its capital), spell one word
+// with sound tiles, and finish with the right end mark.
+export async function dictation(G, s, focus) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const parts = sentenceLine(s);
+  const words = parts.slice(0, -1), mark = parts[parts.length - 1];
+  const slots = parts.map(p => h('div', { class: 'slot' + (isMark(p) ? ' mark' : '') }));
+  const ear = h('button', { class: 'btn round ear-btn', 'aria-label': 'Hear the sentence' }, '👂');
+  const area = h('div', { class: 'dict-area' });
+  st.append(h('div', { class: 'sentence' }, h('div', { class: 'dict-top' }, ear, h('div', { class: 'sent-line' }, slots)), area));
+  const hear = () => say(s.id);
+  onTap(ear, () => { anim(ear, 'boing'); hear(); });
+  G.setReplay(hear);
+  await say('n_dict_listen', 250, s.id);
+  const placed = [];
+  let right = 0, total = 0;
+  const pool = [...new Set(G.words.map(x => x.w).concat([...G.known.h]))].filter(w => w.length > 1);
+
+  for (let i = 0; i < words.length; i++) {
+    slots.forEach((sl, k) => sl.classList.toggle('next', k === i));
+    const word = words[i], low = bare(word);
+    let res;
+    if (focus && i === focus.index) {
+      res = await forge(G, focus.item, { host: area });
+    } else {
+      const shown = w => (i === 0 ? capFirst(w) : w);
+      const near = shuffle(pool.filter(w => w !== low && (w[0] === low[0] || Math.abs(w.length - low.length) <= 1))).slice(0, 2).map(shown);
+      // The first word is also offered without its capital letter.
+      const opts = shuffle([word, ...(i === 0 && word !== low && low !== 'i' ? [low, near[0]] : near)].filter(Boolean));
+      area.innerHTML = '';
+      const row = h('div', { class: 'choice-row' });
+      area.append(row);
+      const ask = () => say('n_dict_find', W(low));
+      G.setReplay(ask);
+      ask();
+      let tries = 0;
+      res = await new Promise(resolve => opts.forEach(o => {
+        const c = h('div', { class: 'word-choice pop-in' }, o);
+        if (o === word) c.dataset.ok = 1;
+        onTap(c, async () => {
+          if (c.classList.contains('locked')) return;
+          if (o === word) {
+            row.querySelectorAll('.word-choice').forEach(x => x.classList.add('locked'));
+            c.classList.add('right'); sfx('good'); burstAt(c, 14);
+            await sleep(350);
+            resolve({ right: tries === 0 ? 1 : 0, total: 1 });
+          } else {
+            tries++; c.classList.add('wrong', 'locked'); anim(c, 'shake'); sfx('bad');
+            await say(o.toLowerCase() === low ? 'n_dict_first' : W(low));
+          }
+        });
+        row.append(c);
+      }));
+    }
+    right += res.right; total += res.total;
+    const chip = chipEl(word);
+    slots[i].append(chip); placed.push(chip); anim(chip, 'drop-in', 400);
+  }
+
+  // The end mark.
+  slots.forEach((sl, k) => sl.classList.toggle('next', k === words.length));
+  area.innerHTML = '';
+  const row = h('div', { class: 'choice-row' });
+  area.append(row);
+  G.setReplay(() => say('n_dict_end'));
+  say('n_dict_end');
+  let tries = 0;
+  await new Promise(resolve => ['.', '?', '!'].forEach(o => {
+    const c = h('div', { class: 'word-choice mark pop-in' }, o);
+    if (o === mark) c.dataset.ok = 1;
+    onTap(c, () => {
+      if (c.classList.contains('locked')) return;
+      if (o === mark) { row.querySelectorAll('.word-choice').forEach(x => x.classList.add('locked')); c.classList.add('right'); resolve(); }
+      else { tries++; c.classList.add('wrong', 'locked'); anim(c, 'shake'); sfx('bad'); }
+    });
+    row.append(c);
+  }));
+  right += tries === 0 ? 1 : 0; total++;
+  const chip = chipEl(mark);
+  slots[words.length].append(chip); placed.push(chip);
+  slots.forEach(sl => sl.classList.remove('next'));
+  area.innerHTML = '';
+  sfx('sparkle');
+  const clean = right === total;
+  store.record('s:' + s.id, clean);
+  G.gem(slots[words.length], clean ? 4 : 2);
+  await say('n_dict_read');
+  await readSentence(s.id, placed);
+  await praise();
+  return { right: clean ? 1 : 0, total: 1 };
+}
+
+// ---------------------------------------------------------------- Finish My Sentence
+// The child picks how the sentence ends, spells that word, and hears their sentence.
+export async function finishSentence(G, frame, items) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const chips = frame.t.split(' ').map(w => chipEl(w));
+  const blank = h('div', { class: 'slot next' });
+  const line = h('div', { class: 'sent-line' }, chips, blank, chipEl('.'));
+  const area = h('div', { class: 'dict-area' });
+  st.append(h('div', { class: 'sentence' }, line, area));
+  const row = h('div', { class: 'choice-row pics' });
+  area.append(row);
+  const ask = () => say(frame.id, 400, 'n_finish_go');
+  G.setReplay(ask);
+  ask();
+  const item = await new Promise(resolve => items.forEach((it, k) => {
+    const c = h('div', { class: 'pic-card pop-in' }, h('span', { class: 'emoji' }, it.e));
+    if (k === 0) c.dataset.ok = 1;
+    onTap(c, () => { if (row.classList.contains('locked')) return; row.classList.add('locked'); sfx('tap'); c.classList.add('right'); resolve(it); });
+    row.append(c);
+  }));
+  await sleep(300);
+  const res = await forge(G, item, { host: area });
+  area.innerHTML = '';
+  const chip = chipEl(item.w);
+  blank.append(chip); blank.classList.remove('next');
+  anim(chip, 'drop-in', 400);
+  line.classList.add('done');
+  G.gem(line, 2);
+  await say('n_finish_read', 250);
+  const lit = [...line.querySelectorAll('.wchip')];
+  lit.forEach(c => c.classList.add('hl'));
+  await say(frame.id, W(item.w));
+  lit.forEach(c => c.classList.remove('hl'));
+  await praise();
+  return res;
+}
+
+// ================================================================ Word games
+// ---------------------------------------------------------------- Memory Match
+export async function memory(G, items) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const cards = shuffle(items.flatMap(it => [{ it, kind: 'w' }, { it, kind: 'p' }]));
+  const grid = h('div', { class: 'mem-grid n' + cards.length });
+  st.append(h('div', { class: 'center-col' }, grid));
+  let first = null, busy = false, matched = 0, misses = 0;
+  cards.forEach(c => {
+    const face = c.kind === 'w' ? h('div', { class: 'mem-face word' }, c.it.w) : h('div', { class: 'mem-face' }, h('span', { class: 'emoji' }, c.it.e));
+    c.el = h('div', { class: 'mem-card pop-in' }, h('div', { class: 'mem-back' }, '⭐'), face);
+  });
+  grid.append(...cards.map(c => c.el));
+  const markNext = () => {
+    cards.forEach(c => delete c.el.dataset.ok);
+    const target = first ? cards.find(c => c !== first && c.it === first.it) : cards.find(c => !c.el.classList.contains('up'));
+    if (target) target.el.dataset.ok = 1;
+  };
+  markNext();
+  G.setReplay(() => say('n_memory_go'));
+  say('n_memory_go');
+  return new Promise(resolve => cards.forEach(c => onTap(c.el, async () => {
+    if (busy || c.el.classList.contains('up')) return;
+    c.el.classList.add('up'); sfx('tap');
+    if (!first) { first = c; markNext(); return; }
+    const a = first; first = null;
+    if (a.it === c.it) {
+      a.el.classList.add('matched'); c.el.classList.add('matched');
+      matched++;
+      burstAt(c.el, 16); G.gem(c.el, 1);
+      store.record('w:' + c.it.w, true);
+      markNext();
+      await say(W(c.it.w));
+      if (matched === items.length) {
+        await sleep(300);
+        confetti(40);
+        await praise();
+        resolve({ right: Math.max(0, items.length - Math.floor(misses / 2)), total: items.length, score: Math.max(10, 100 - misses * 8) });
+      }
+    } else {
+      misses++; busy = true; sfx('bad');
+      await sleep(900);
+      a.el.classList.remove('up'); c.el.classList.remove('up');
+      busy = false;
+      markNext();
+    }
+  })));
+}
+
+// ---------------------------------------------------------------- Word Ladder
+// Change one sound at a time: cat -> cot -> cog.
+export async function ladder(G, chain) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const row = h('div', { class: 'word-card' });
+  const pic = h('div', { class: 'forge-pic' }, h('span', { class: 'emoji' }, ''));
+  const opts = h('div', { class: 'choice-row' });
+  const rungs = h('div', { class: 'rungs' });
+  st.append(h('div', { class: 'ladder' }, rungs, pic, row, opts));
+  let cur = chain[0], tries = 0;
+  const draw = () => {
+    row.innerHTML = '';
+    const tiles = cur.seg.map(g => tileEl(g, 'word-tile'));
+    row.append(...tiles);
+    return tiles;
+  };
+  rungs.append(h('span', { class: 'rung' }, cur.w));
+  for (let k = 1; k < chain.length; k++) {
+    const target = chain[k];
+    const pos = cur.seg.findIndex((g, i) => g !== target.seg[i]);
+    pic.firstChild.textContent = target.e || '❓';
+    anim(pic, 'bounce', 600);
+    let tiles = draw();
+    const ask = () => say('n_ladder_go', W(target.w));
+    G.setReplay(ask);
+    ask();
+    // Which sound changes?
+    await new Promise(resolve => tiles.forEach((t, i) => {
+      if (i === pos) t.dataset.ok = 1;
+      onTap(t, () => {
+        if (row.classList.contains('locked')) return;
+        if (P(cur.seg[i])) tap(P(cur.seg[i]));
+        if (i === pos) { row.classList.add('locked'); t.classList.add('picked'); delete t.dataset.ok; resolve(); }
+        else { tries++; anim(t, 'shake'); if (tries >= 2) tiles[pos].classList.add('hint'); }
+      });
+    }));
+    // Which new sound?
+    const want = target.seg[pos];
+    const choices = shuffle([want, ...otherGraphemes(want, G.known.g, 4).filter(g => g !== cur.seg[pos]).slice(0, 2)]);
+    opts.innerHTML = '';
+    say('n_ladder_pick');
+    await new Promise(resolve => choices.forEach(g => {
+      const t = soundEl(g, 'pop-in');
+      if (g === want) t.dataset.ok = 1;
+      onTap(t, () => {
+        if (t.classList.contains('locked')) return;
+        tap(P(g));
+        if (g === want) { opts.querySelectorAll('.tile').forEach(x => x.classList.add('locked')); t.classList.add('right'); resolve(); }
+        else { tries++; t.classList.add('wrong', 'locked'); anim(t, 'shake'); }
+      });
+      opts.append(t);
+    }));
+    await sleep(300);
+    opts.innerHTML = '';
+    row.classList.remove('locked');
+    cur = target;
+    tiles = draw();
+    tiles[pos].classList.add('right'); anim(tiles[pos], 'drop-in', 400);
+    rungs.append(h('span', { class: 'rung pop-in' }, cur.w));
+    sfx('sparkle');
+    await say(W(cur.w));
+    store.record('w:' + cur.w, tries === 0);
+  }
+  G.gem(row, tries === 0 ? 3 : 1);
+  await praise();
+  return { right: tries === 0 ? 1 : 0, total: 1 };
+}
+
+// ---------------------------------------------------------------- Spelling Detective
+// One sound, several spellings: which one is in this word?
+export async function spellSort(G, group, words) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const bins = group.map(g => { const b = h('div', { class: 'bin pop-in' }, h('span', {}, label(g))); b.dataset.g = g; return b; });
+  const pic = h('div', { class: 'forge-pic' }, h('span', { class: 'emoji' }, ''));
+  const row = h('div', { class: 'word-card' });
+  st.append(h('div', { class: 'sort' }, pic, row, h('div', { class: 'bins' }, bins)));
+  let right = 0, first = true, current = null;
+  bins.forEach(b => onTap(b, () => current && current(b)));
+  for (const item of words) {
+    const hide = g => g === item.g || (g === SILENT_E && isSplit(item.g));
+    row.innerHTML = '';
+    row.append(...item.seg.map(g => hide(g) ? h('div', { class: 'tile word-tile blank' }, '?') : tileEl(g, 'word-tile')));
+    anim(row, 'drop-in', 400);
+    pic.firstChild.textContent = item.e || '👂';
+    bins.forEach(b => { b.classList.remove('right', 'wrong', 'locked'); if (b.dataset.g === item.g) b.dataset.ok = 1; else delete b.dataset.ok; });
+    const ask = () => say(W(item.w));
+    G.setReplay(ask);
+    if (first) say('n_sort_go', 200, W(item.w)); else ask();
+    first = false;
+    let tries = 0;
+    await new Promise(resolve => {
+      current = async b => {
+        if (b.classList.contains('locked')) return;
+        if (b.dataset.g === item.g) {
+          current = null;
+          bins.forEach(x => x.classList.add('locked'));
+          delete b.dataset.ok;
+          b.classList.add('right'); sfx('good'); burstAt(b, 18);
+          row.innerHTML = '';
+          row.append(...item.seg.map(g => tileEl(g, 'word-tile' + (hide(g) ? ' right' : ''))));
+          if (!tries) G.gem(b, 1);
+          store.record('w:' + item.w, tries === 0);
+          await say(W(item.w));
+          resolve();
+        } else {
+          tries++; b.classList.add('wrong', 'locked'); anim(b, 'shake'); sfx('bad');
+          await say(W(item.w));
+        }
+      };
+    });
+    if (tries === 0) right++;
+    await sleep(500);
+  }
+  await praise();
+  return { right, total: words.length };
+}
+
+// ---------------------------------------------------------------- Syllable Chop
+export async function chop(G, item) {
+  const st = G.stage;
+  st.innerHTML = '';
+  const parts = splitSyllables(item.seg, item.syl);
+  const cuts = new Set();
+  parts.slice(0, -1).reduce((n, p) => { cuts.add(n + p.length); return n + p.length; }, 0);
+  const tiles = item.seg.map(g => tileEl(g, 'word-tile'));
+  const row = h('div', { class: 'chop-row' });
+  const gaps = [];
+  tiles.forEach((t, i) => {
+    if (i > 0) {
+      const gap = h('div', { class: 'gap' }, h('i'));
+      if (cuts.has(i)) gap.dataset.ok = 1;
+      gaps.push(gap);
+      row.append(gap);
+    }
+    row.append(t);
+  });
+  const pic = h('div', { class: 'forge-pic pop-in' }, h('span', { class: 'emoji' }, item.e || '✂️'));
+  st.append(h('div', { class: 'forge' }, pic, row));
+  const ask = () => say('n_chop_go');
+  G.setReplay(ask);
+  ask();
+  let tries = 0, done = 0;
+  await new Promise(resolve => gaps.forEach(gap => onTap(gap, () => {
+    if (gap.classList.contains('cut')) return;
+    if (gap.dataset.ok) {
+      delete gap.dataset.ok;
+      gap.classList.add('cut'); gap.classList.remove('hint'); sfx('pop'); burstAt(gap, 14);
+      if (++done === cuts.size) resolve();
+    } else { tries++; anim(gap, 'shake'); sfx('bad'); if (tries >= 2) gaps.filter(g => g.dataset.ok).forEach(g => g.classList.add('hint')); }
+  })));
+  await sleep(300);
+  await say('n_chop_read');
+  let k = 0;
+  for (const p of parts) {
+    const ts = tiles.slice(k, k + p.length);
+    ts.forEach(t => t.classList.add('lit'));
+    for (const g of p) if (P(g)) { await tap(P(g)); await sleep(60); }
+    await sleep(250);
+    ts.forEach(t => t.classList.remove('lit'));
+    k += p.length;
+  }
+  tiles.forEach(t => anim(t, 'wave', 600));
+  await say(W(item.w));
+  store.record('w:' + item.w, tries === 0);
+  G.gem(row, tries === 0 ? 2 : 1);
+  await praise();
+  return { right: tries === 0 ? 1 : 0, total: 1 };
 }

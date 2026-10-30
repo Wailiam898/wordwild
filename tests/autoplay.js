@@ -21,7 +21,7 @@
     if (ok && !st.dataset.ok) { log.push('ok ' + st.className); return tapEl(ok); }
     const field = st.querySelector('.pop-field');
     if (field) {
-      const b = [...field.querySelectorAll('.bubble:not(.popped)')].find(b => b.textContent === field.dataset.target && b.getBoundingClientRect().top < innerHeight - 60);
+      const b = [...field.querySelectorAll('.bubble:not(.popped)')].find(b => b.dataset.g === field.dataset.target && b.getBoundingClientRect().top < innerHeight - 60);
       if (b) { b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); log.push('pop ' + field.dataset.target); }
       return;
     }
@@ -31,7 +31,7 @@
     if (st.dataset.seq && st.querySelector('.tray')) {
       const seq = st.dataset.seq.split(',');
       const filled = st.querySelectorAll('.sound-box .tile').length;
-      const t = [...st.querySelectorAll('.tray-tile:not(.used)')].find(t => t.textContent === seq[filled]);
+      const t = [...st.querySelectorAll('.tray-tile:not(.used)')].find(t => t.dataset.g === seq[filled]);
       if (t) tapEl(t);
       return;
     }

@@ -1,5 +1,7 @@
-"""One MP3 to check every pure sound by ear: each sound twice, then its key word.
-Writes work/sound_tour.mp3 and prints the order with timestamps."""
+"""One MP3 to check pure sounds by ear: each sound twice, then its key word.
+Writes work/sound_tour.mp3 and prints the order with timestamps.
+--from G starts at grapheme G (e.g. --from y2 for the sounds added with worlds 5-7);
+--extra id1,id2 appends other clips (e.g. words the speech check flagged)."""
 import sys, json, subprocess
 from pathlib import Path
 import numpy as np
@@ -19,6 +21,10 @@ def clip(path):
     return np.frombuffer(raw, np.float32)
 
 
+if "--from" in sys.argv:
+    start = sys.argv[sys.argv.index("--from") + 1]
+    order = order[[g for g, _ in order].index(start):]
+extra = sys.argv[sys.argv.index("--extra") + 1].split(",") if "--extra" in sys.argv else []
 gap = lambda s: np.zeros(int(s * SR), np.float32)
 parts, t, lines = [gap(0.5)], 0.5, []
 for g, key in order:
@@ -26,6 +32,11 @@ for g, key in order:
     w = clip(ROOT / "app" / "audio" / f"w_{key}.mp3")
     lines.append(f"{int(t // 60)}:{int(t % 60):02d}  {g:4s} ({key})")
     for x in (s, gap(0.45), s, gap(0.45), w, gap(1.0)):
+        parts.append(x)
+        t += len(x) / SR
+for iid in extra:
+    lines.append(f"{int(t // 60)}:{int(t % 60):02d}  {iid}")
+    for x in (clip(ROOT / "app" / "audio" / f"{iid}.mp3"), gap(1.0)):
         parts.append(x)
         t += len(x) / SR
 out = np.concatenate(parts)

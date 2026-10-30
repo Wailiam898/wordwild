@@ -40,7 +40,13 @@ PIP_LINE = [(NAT, "+0%", "+20Hz")]
 # Wider search used on a second pass for clips that failed (--retry-flags).
 EXTRA = [(v, r, p) for v in (NAT, WIL) for r in ("-25%", "-15%", "+0%", "+10%") for p in ("+0Hz", "+20Hz")]
 # Words that sound identical; hearing either spelling is a pass.
-HOMOPHONES = {"fin": "finn", "mail": "male", "bee": "be", "high": "hi", "sort": "sought", "sam": "sam"}
+HOMOPHONES = {"fin": "finn", "mail": "male", "bee": "be", "high": "hi", "sort": "sought", "sam": "sam",
+              "for": ("four", "fore"), "two": ("to", "too"), "new": "knew", "dew": ("due", "do"), "sea": "see",
+              "tea": "tee", "pie": "pi", "hay": "hey", "nose": "knows", "hole": "whole", "made": "maid",
+              "plane": "plain", "which": "witch", "some": "sum", "would": "wood", "saw": "sore",
+              "paw": ("poor", "pour", "pore"), "here": "hear", "your": ("youre", "yore"), "where": "wear",
+              "bean": "been", "whale": "wail", "few": "phew", "stew": "stu", "tea": ("t", "tee"), "lolly": "loli",
+              "one": ("won", "1")}
 RUDE = {"fuck", "fucking", "shit", "suck", "sucks", "dick", "cock", "piss", "bitch", "ass", "arse", "crap", "damn", "hell"}
 
 args = sys.argv[1:]
@@ -56,7 +62,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 WAV.mkdir(parents=True, exist_ok=True)
 cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
 flags = json.loads(FLAGS.read_text(encoding="utf-8")) if FLAGS.exists() else {}
-NUM = {"10": "ten", "6": "six"}
+NUM = {"10": "ten", "6": "six", "4": "four", "2": "two", "1": "one", "5": "five", "9": "nine"}
 
 
 def tts(text, cand):
@@ -104,7 +110,8 @@ def understood(text, heard):
         return False
     if len(want) == 1:
         w = want[0]
-        if HOMOPHONES.get(w) in got:
+        alt = HOMOPHONES.get(w, ())
+        if any(x in got for x in ((alt,) if isinstance(alt, str) else alt)):
             return True
         return any(g == w or (len(w) >= 4 and lev(w, g) <= 1) for g in got) or "".join(got) == w
     # Sentences: every content word must be heard; allow small slips elsewhere.

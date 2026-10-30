@@ -15,7 +15,7 @@ const fresh = () => ({
   gems: 0,
   hats: ['none'], hat: 'none',
   wordlings: [], books: [],
-  best: { pop: 0, rocket: 0 },
+  best: { pop: 0, rocket: 0, memory: 0 },
   today: { date: '', sec: 0 },
   settings: { music: true, limit: 20 },
   unlocked: 0,         // parent skip-ahead: lessons below this index are open
@@ -71,7 +71,7 @@ export function merge(c) {
   S.gems = Math.max(0, S.gems + (c.gems || 0) - base);
   S.baseGems = c.gems || 0;
   for (const f of ['hats', 'wordlings', 'books']) S[f] = [...new Set([...(S[f] || []), ...(c[f] || [])])];
-  S.best = { pop: Math.max(S.best.pop, (c.best || {}).pop || 0), rocket: Math.max(S.best.rocket, (c.best || {}).rocket || 0) };
+  for (const [k, v] of Object.entries(c.best || {})) S.best[k] = Math.max(S.best[k] || 0, v || 0);
   S.unlocked = Math.max(S.unlocked || 0, c.unlocked || 0);
   S.seenIntro = S.seenIntro || !!c.seenIntro;
   persist();
