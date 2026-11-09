@@ -34,7 +34,7 @@ function backBtn(fn) {
   return onTap(h('button', { class: 'btn round back', 'aria-label': 'Back' }, '⬅'), () => { sfx('tap'); fn(); });
 }
 
-// Time played (for the parent's daily limit).
+// Time played (shown in the parents' area).
 setInterval(() => {
   if (!document.hidden && ['lesson', 'arcade', 'story'].includes(screenName)) store.tickTime(1);
 }, 1000);
@@ -322,7 +322,6 @@ function lessonPlan(i) {
 }
 
 async function startLesson(i) {
-  if (store.overLimit()) return restScreen();
   const { L, known, steps, all } = lessonPlan(i);
   const wd = WORLDS[L.wi];
   const pool = pictureWordsUpTo(i);
@@ -469,16 +468,8 @@ function finishRewards(wrap, gems, from) {
   setTimeout(refreshGems, 1200);
   onTap(go, () => {
     sfx('tap');
-    if (store.overLimit()) restScreen(); else mapScreen();
+    mapScreen();
   });
-}
-
-// ================================================================ Rest (daily limit)
-async function restScreen() {
-  const pip = h('div', { class: 'rest-pip', html: pipSVG('sleepy', hatEmoji()) });
-  const back = backBtn(mapScreen);
-  show('rest', h('div', { class: 'rest' }, back, h('div', { class: 'moon' }, '🌙'), h('div', { class: 'zzz' }, 'z z z'), pip));
-  await say('n_rest');
 }
 
 // ================================================================ Zoo
@@ -623,8 +614,6 @@ function parentScreen() {
   });
   const conf = store.topConfusions(5);
   const weakWords = Object.entries(s.items).filter(([k, v]) => k.startsWith('w:') && v.n >= 2 && v.c / v.n < 0.6).map(([k]) => k.slice(2)).slice(0, 12);
-  const limitSel = h('select', {}, ...[0, 10, 15, 20, 30, 45].map(m => h('option', { value: m, selected: s.settings.limit === m ? '' : null }, m ? `${m} minutes` : 'No limit')));
-  limitSel.onchange = () => { s.settings.limit = +limitSel.value; store.save(); };
   const music = h('input', { type: 'checkbox', checked: s.settings.music ? '' : null });
   music.onchange = () => { s.settings.music = music.checked; store.save(); audio.setMusic(music.checked); };
   const what = l => l.g.length ? l.g.map(label).join(' ') : l.focus || 'review';
@@ -637,8 +626,6 @@ function parentScreen() {
     LESSONS.slice(0, to).forEach(l => { if (!s.done[l.id]) s.done[l.id] = { stars: 1, acc: 0, plays: 0, skipped: true }; });
     store.save(); jumpBtn.textContent = 'Done ✓';
   };
-  const extend = h('button', { class: 'pbtn' }, 'Allow more play today');
-  extend.onclick = () => { store.extendToday(); extend.textContent = 'Done ✓'; };
   const resetBtn = h('button', { class: 'pbtn danger' }, 'Reset all progress');
   let resetArm = false;
   resetBtn.onclick = () => {
@@ -694,9 +681,7 @@ function parentScreen() {
         weakWords.length ? h('p', {}, 'Tricky words: ', weakWords.map(w => h('span', { class: 'chip' }, w))) : null,
         h('p', { class: 'tip' }, 'Tip: after each story, ask your child to read it to you again. Re-reading builds fluency.')),
       pcard('Settings',
-        h('label', {}, 'Daily play limit ', limitSel),
         h('label', {}, music, ' Background music'),
-        h('div', { class: 'p-row' }, extend),
         h('label', {}, 'Already reading? Skip ahead to ', jumpSel), jumpBtn,
         h('div', { class: 'p-row' }, resetBtn)),
       pcard('How Wordwild teaches',

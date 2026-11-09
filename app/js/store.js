@@ -17,7 +17,7 @@ const fresh = () => ({
   wordlings: [], books: [],
   best: { pop: 0, rocket: 0, memory: 0 },
   today: { date: '', sec: 0 },
-  settings: { music: true, limit: 20 },
+  settings: { music: true },
   unlocked: 0,         // parent skip-ahead: lessons below this index are open
   seenIntro: false,
   // Account + cloud sync
@@ -205,10 +205,4 @@ export function tickTime(sec) {
 }
 export function minutesToday() {
   return S.today.date === todayStr() ? S.today.sec / 60 : 0;
-}
-export function overLimit() {
-  return S.settings.limit > 0 && minutesToday() >= S.settings.limit;
-}
-export function extendToday() {
-  S.today.sec = 0; save();
 }
