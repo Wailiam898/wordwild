@@ -4,6 +4,10 @@ import { PRAISE, OOPS } from './data.js';
 
 export const sleep = ms => new Promise(r => setTimeout(r, ms));
 
+// True when the device asks for reduced motion. Read live, so a change in Settings applies at once.
+const reducedQuery = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+export const calm = () => !!(reducedQuery && reducedQuery.matches);
+
 // Entry animations run once; drop the class so later effects don't replay them.
 document.addEventListener('animationend', e => {
   if (e.animationName === 'popIn') e.target.classList.remove('pop-in');
@@ -61,10 +65,16 @@ const FX = {
   'combo-pop': [[{ transform: 'scale(.2) rotate(-20deg)', opacity: 0 }, { transform: 'scale(1.4) rotate(6deg)', opacity: 1, offset: .4 }, { transform: 'none', opacity: 1 }], 700],
   'drop-in': [[{ transform: 'translateY(-60px) scale(.6)', opacity: 0 }, { transform: 'translateY(6px) scale(1.05)', opacity: 1, offset: .7 }, { transform: 'none', opacity: 1 }], 400],
 };
+// The same effects for reduced motion: a fade or a tiny swell, never a jump or a shake.
+const SWELL = [[{ transform: 'none' }, { transform: 'scale(1.05)' }, { transform: 'none' }], 260];
+const FADE_DIP = [[{ opacity: 1 }, { opacity: .45 }, { opacity: 1 }], 320];
+const FADE_IN = [[{ opacity: 0 }, { opacity: 1 }], 300];
+const CALM = { shake: FADE_DIP, bounce: SWELL, jump: SWELL, boing: SWELL, wiggle: SWELL, bump: SWELL, wave: SWELL, 'combo-pop': FADE_IN, 'drop-in': FADE_IN };
 export function anim(el, name, ms) {
   if (!el || !FX[name]) return;
-  const [frames, dur] = FX[name];
-  const iterations = ms && ms > dur ? Math.round(ms / dur) : 1;
+  const quiet = calm() && CALM[name];
+  const [frames, dur] = quiet || FX[name];
+  const iterations = !quiet && ms && ms > dur ? Math.round(ms / dur) : 1;
   el.animate(frames, { duration: dur, iterations, easing: 'ease-out', composite: 'replace' });
 }
 
@@ -124,12 +134,15 @@ export function clearFx() { parts = []; if (cx) cx.clearRect(0, 0, innerWidth, i
 
 export function burst(x, y, n = 24, kind = 'star', spread = 9) {
   ensureCanvas();
+  const quiet = calm();
+  // Reduced motion: a few sparkles that hardly move and fade quickly.
+  if (quiet) { n = Math.min(n, 6); spread = 0.5; }
   for (let i = 0; i < n; i++) {
-    const a = Math.random() * Math.PI * 2, sp = Math.random() * spread + 3;
+    const a = Math.random() * Math.PI * 2, sp = Math.random() * spread + (quiet ? 0.5 : 3);
     parts.push({
-      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3, g: 0.28,
+      x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (quiet ? 0 : 3), g: quiet ? 0 : 0.28,
       s: Math.random() * 8 + 5, c: pick(COLORS), rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.3,
-      life: 50 + Math.random() * 30, kind,
+      life: (quiet ? 22 : 50) + Math.random() * 30, kind,
     });
   }
   if (!raf) raf = requestAnimationFrame(loop);
@@ -139,6 +152,7 @@ export function burstAt(el, n, kind) {
   burst(r.left + r.width / 2, r.top + r.height / 2, n, kind);
 }
 export function confetti(n = 140) {
+  if (calm()) return;   // reduced motion: no confetti storm
   ensureCanvas();
   for (let i = 0; i < n; i++) {
     parts.push({
@@ -154,6 +168,10 @@ export function confetti(n = 140) {
 // Gems fly from an element to the gem counter.
 export function flyGems(fromEl, n = 1) {
   const target = document.querySelector('.gem-pill');
+  if (calm()) {   // reduced motion: no flying gems; the counter just gives a small nod
+    setTimeout(() => { if (target) anim(target, 'bump', 300); sfx('coin'); }, 250);
+    return;
+  }
   const r = fromEl.getBoundingClientRect();
   const tr = target ? target.getBoundingClientRect() : { left: innerWidth - 60, top: 20, width: 40, height: 40 };
   for (let i = 0; i < Math.min(n, 8); i++) {

@@ -1,65 +1,71 @@
-// Vector art: Pip, procedurally generated Wordlings, eggs, the rocket.
+// Vector art: Pip (the hero baby chick), the Wordling eggs and chicks, the stepping stones.
+import { babySVG } from './babies.js';
 let uid = 0;
 
+const INK = '#3a2d4a';
 // mood: 'happy' | 'talk' | 'sad' | 'wow' | 'sleepy'
+// Pip is the hero chick: a little bigger and more expressive than the Wordlings, drawn in the same soft style.
+// Classes kept for the animations: pip-body (idle squash), pip-eyes (blink), pip-mouth (talking beak), pip-wing l/r.
 export function pipSVG(mood = 'happy', hat = '') {
   const id = 'p' + (uid++);
+  const ln = (d, w = 4, c = INK, extra = '') => `<path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round" ${extra}/>`;
+  const beakUp = '<path d="M87 123 Q100 112 113 123 Q100 138 87 123Z" fill="#ff9a3c"/><path d="M93 123 Q100 119 107 123" stroke="rgba(255,255,255,.6)" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+  const smileL = ln('M78 130 Q84 142 94 134', 3.6) + ln('M122 130 Q116 142 106 134', 3.6);
   const mouths = {
-    happy: '<path d="M84 128 Q100 144 116 128" stroke="#2a1d5c" stroke-width="5" fill="none" stroke-linecap="round"/>',
-    talk: '<g class="pip-mouth"><ellipse cx="100" cy="132" rx="11" ry="9" fill="#2a1d5c"/><ellipse cx="100" cy="137" rx="7" ry="4" fill="#ff7a9c"/></g>',
-    wow: '<path d="M82 124 Q100 150 118 124 Z" fill="#2a1d5c"/><path d="M90 136 Q100 146 110 136 Z" fill="#ff7a9c"/>',
-    sad: '<path d="M86 136 Q100 124 114 136" stroke="#2a1d5c" stroke-width="5" fill="none" stroke-linecap="round"/>',
-    sleepy: '<ellipse cx="100" cy="134" rx="6" ry="5" fill="#2a1d5c"/>',
+    happy: beakUp + smileL,
+    talk: `<g class="pip-mouth"><path d="M90 128 Q100 150 110 128 Z" fill="${INK}"/><ellipse cx="100" cy="140" rx="6.5" ry="3.8" fill="#ff7a9c"/></g>`
+      + '<path d="M87 123 Q100 112 113 123 Q100 131 87 123Z" fill="#ff9a3c"/>',
+    wow: `<path d="M91 126 Q100 156 109 126 Z" fill="${INK}"/><ellipse cx="100" cy="142" rx="6" ry="3.6" fill="#ff7a9c"/><path d="M87 123 Q100 112 113 123 Q100 131 87 123Z" fill="#ff9a3c"/>`,
+    sad: beakUp + ln('M80 142 Q86 132 94 138', 3.6) + ln('M120 142 Q114 132 106 138', 3.6),
+    sleepy: beakUp + ln('M92 133 Q100 139 108 133', 3.2),
   };
+  const eyeAt = (x, rx, ry) => `${`<ellipse class="pupil" cx="${x}" cy="108" rx="${rx}" ry="${ry}" fill="${INK}"/>`}<circle cx="${x + 4.5}" cy="${108 - 6}" r="5.4" fill="#fff"/><circle cx="${x - 4.5}" cy="${108 + 6.5}" r="2.6" fill="#fff" opacity=".85"/>`;
+  const big = mood === 'wow';
   const eyes = mood === 'sleepy'
-    ? `<path d="M64 104 Q76 112 88 104" stroke="#2a1d5c" stroke-width="5" fill="none" stroke-linecap="round"/>
-       <path d="M112 104 Q124 112 136 104" stroke="#2a1d5c" stroke-width="5" fill="none" stroke-linecap="round"/>`
-    : `<g class="pip-eyes">
-        <ellipse cx="76" cy="102" rx="17" ry="21" fill="#fff"/>
-        <ellipse cx="124" cy="102" rx="17" ry="21" fill="#fff"/>
-        <circle class="pupil" cx="79" cy="106" r="11" fill="#2a1d5c"/>
-        <circle class="pupil" cx="121" cy="106" r="11" fill="#2a1d5c"/>
-        <circle cx="83" cy="100" r="4.5" fill="#fff"/>
-        <circle cx="125" cy="100" r="4.5" fill="#fff"/>
-        <circle cx="75" cy="111" r="2" fill="#fff" opacity=".8"/>
-        <circle cx="117" cy="111" r="2" fill="#fff" opacity=".8"/>
-       </g>`;
-  const hatSvg = hat
-    ? `<text x="100" y="${hat === '🕶️' ? 116 : 52}" font-size="${hat === '🕶️' ? 62 : 58}" text-anchor="middle" dominant-baseline="middle">${hat}</text>`
+    ? `<g class="pip-eyes">${ln('M58 108 Q72 120 86 108', 4.6)}${ln('M114 108 Q128 120 142 108', 4.6)}</g>`
+    : `<g class="pip-eyes">${eyeAt(72, big ? 15 : 13.5, big ? 19 : 16.5)}${eyeAt(128, big ? 15 : 13.5, big ? 19 : 16.5)}</g>`;
+  const brows = mood === 'sad' ? ln('M54 92 L86 82', 4.4, '#d99a2e') + ln('M146 92 L114 82', 4.4, '#d99a2e')
+    : mood === 'wow' ? ln('M58 80 Q72 70 86 78', 4.4, '#d99a2e') + ln('M142 80 Q128 70 114 78', 4.4, '#d99a2e')
     : '';
-  return `<svg class="pip-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  const extra = mood === 'sad' ? '<path d="M54 120 Q47 134 54 140 Q61 134 54 120Z" fill="#8fd3ff" stroke="#5aa9ff" stroke-width="2"/>'
+    : mood === 'wow' ? [[34, 58], [168, 64], [156, 34]].map(([x, y], k) => `<path d="M${x} ${y - 9} l3 6 6 3 -6 3 -3 6 -3 -6 -6 -3 6 -3z" fill="#fff6a8" stroke="#ffc83f" stroke-width="2" ${k ? '' : 'transform="scale(1.2)" style="transform-box:fill-box;transform-origin:center"'}/>`).join('')
+    : mood === 'sleepy' ? `<text x="150" y="56" font-size="30" font-weight="700" fill="#7a62f5" font-family="sans-serif">z</text><text x="166" y="38" font-size="22" font-weight="700" fill="#7a62f5" font-family="sans-serif">z</text>`
+    : '';
+  const hatSvg = hat
+    ? `<text x="100" y="${hat === '🕶️' ? 114 : 50}" font-size="${hat === '🕶️' ? 62 : 58}" text-anchor="middle" dominant-baseline="middle">${hat}</text>`
+    : '';
+  return `<svg class="pip-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pip the chick">
   <defs>
-    <radialGradient id="${id}b" cx="40%" cy="35%" r="70%">
-      <stop offset="0" stop-color="#b9a9ff"/><stop offset=".6" stop-color="#8a72ff"/><stop offset="1" stop-color="#5c43e0"/>
+    <radialGradient id="${id}b" cx="38%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#fff9b8"/><stop offset=".5" stop-color="#ffd75e"/><stop offset="1" stop-color="#f2ac3a"/>
     </radialGradient>
-    <radialGradient id="${id}s" cx="50%" cy="50%" r="50%">
-      <stop offset="0" stop-color="#fff7b0"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#ffb000"/>
-    </radialGradient>
-    <filter id="${id}g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
   </defs>
-  <ellipse cx="100" cy="188" rx="52" ry="8" fill="#000" opacity=".15"/>
+  <ellipse cx="100" cy="192" rx="58" ry="7.5" fill="#000" opacity=".15"/>
   <g class="pip-body">
-    <path class="pip-antenna" d="M100 52 Q96 30 112 18" stroke="#6d55f0" stroke-width="6" fill="none" stroke-linecap="round"/>
-    <g class="pip-star">
-      <circle cx="113" cy="16" r="13" fill="#ffd23f" filter="url(#${id}g)" opacity=".8"/>
-      <path d="M113 4 L116.5 12 L125 12.5 L118.5 18 L120.5 26.5 L113 22 L105.5 26.5 L107.5 18 L101 12.5 L109.5 12 Z" fill="url(#${id}s)" stroke="#e09b00" stroke-width="1.5" stroke-linejoin="round"/>
-    </g>
-    <path d="M52 72 L40 40 L76 58 Z" fill="#7a62f5"/><path d="M148 72 L160 40 L124 58 Z" fill="#7a62f5"/>
-    <path d="M55 68 L48 50 L68 60 Z" fill="#ffb3d1"/><path d="M145 68 L152 50 L132 60 Z" fill="#ffb3d1"/>
-    <ellipse cx="62" cy="178" rx="20" ry="11" fill="#4a33c4"/>
-    <ellipse cx="138" cy="178" rx="20" ry="11" fill="#4a33c4"/>
-    <path d="M100 50 C150 50 172 92 170 128 C168 164 140 182 100 182 C60 182 32 164 30 128 C28 92 50 50 100 50 Z" fill="url(#${id}b)"/>
-    <ellipse cx="100" cy="150" rx="44" ry="28" fill="#e6deff" opacity=".9"/>
-    <ellipse class="pip-arm l" cx="34" cy="132" rx="12" ry="18" fill="#7a62f5"/>
-    <ellipse class="pip-arm r" cx="166" cy="132" rx="12" ry="18" fill="#7a62f5"/>
-    <ellipse cx="80" cy="66" rx="20" ry="9" fill="#fff" opacity=".35" transform="rotate(-20 80 66)"/>
-    ${eyes}
-    <ellipse cx="58" cy="126" rx="10" ry="6" fill="#ff7a9c" opacity=".55"/>
-    <ellipse cx="142" cy="126" rx="10" ry="6" fill="#ff7a9c" opacity=".55"/>
+    <ellipse cx="68" cy="185" rx="18" ry="9" fill="#ffab4a"/><ellipse cx="132" cy="185" rx="18" ry="9" fill="#ffab4a"/>
+    <path d="M100 46 C152 46 176 90 174 128 C172 166 142 186 100 186 C58 186 28 166 26 128 C24 90 48 46 100 46 Z" fill="url(#${id}b)"/>
+    <ellipse cx="100" cy="156" rx="42" ry="26" fill="#fff6d2" opacity=".92"/>
+    <g class="pip-wing l"><ellipse cx="29" cy="132" rx="13" ry="22" fill="#ffc83f" transform="rotate(16 29 132)"/></g>
+    <g class="pip-wing r"><ellipse cx="171" cy="132" rx="13" ry="22" fill="#ffc83f" transform="rotate(-16 171 132)"/></g>
+    <ellipse cx="76" cy="70" rx="18" ry="7.5" fill="#fff" opacity=".45" transform="rotate(-22 76 70)"/>
+    ${ln('M92 48 Q86 26 100 20 M101 46 Q104 22 118 20 M110 49 Q124 34 134 38', 7.5, '#f2a82e')}
+    ${brows}${eyes}
+    <ellipse cx="50" cy="128" rx="11" ry="6.5" fill="#ff8fa8" opacity=".5"/><ellipse cx="150" cy="128" rx="11" ry="6.5" fill="#ff8fa8" opacity=".5"/>
     ${mouths[mood] || mouths.happy}
+    ${extra}
     ${hatSvg}
   </g>
 </svg>`;
+}
+
+// A round stepping stone (a speckled pebble) for the chick to hop on while blending a word.
+export function stoneSVG(k = 0) {
+  const tints = ['#d9c3a3', '#cfd8b0', '#c8d3e6', '#e6c9b8'];
+  const c = tints[k % tints.length];
+  return `<svg class="stone-svg" viewBox="0 0 100 64" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="56" rx="42" ry="7" fill="#000" opacity=".16"/>
+  <path d="M10 42 C8 22 28 12 50 12 C74 12 92 22 90 42 C88 54 70 58 50 58 C30 58 12 54 10 42Z" fill="${c}"/>
+  <path d="M18 30 C24 20 40 17 54 18" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round" opacity=".55"/>
+  <circle cx="68" cy="38" r="3.2" fill="#000" opacity=".12"/><circle cx="36" cy="44" r="2.6" fill="#000" opacity=".12"/><circle cx="56" cy="46" r="2" fill="#000" opacity=".12"/></svg>`;
 }
 
 function hash(s) { let h = 2166136261; for (const c of s) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
@@ -79,57 +85,10 @@ export function wordlingLook(name) {
   };
 }
 
-export function wordlingSVG(name, silhouette = false) {
-  const L = wordlingLook(name);
-  const id = 'w' + (uid++);
-  const body = silhouette ? '#000' : `url(#${id}b)`;
-  const dark = silhouette ? '#000' : `hsl(${L.hue} 60% 40%)`;
-  const belly = `hsl(${L.hue} 90% 88%)`;
-  const acc = `hsl(${L.hue2} 85% 60%)`;
-  const shapes = [
-    'M100 40 C155 40 175 90 172 130 C170 168 140 186 100 186 C60 186 30 168 28 130 C25 90 45 40 100 40 Z',
-    'M100 30 C140 30 155 70 155 120 C155 165 135 186 100 186 C65 186 45 165 45 120 C45 70 60 30 100 30 Z',
-    'M100 62 C165 62 186 100 184 140 C182 172 150 186 100 186 C50 186 18 172 16 140 C14 100 35 62 100 62 Z',
-    'M100 36 C128 36 140 70 156 110 C172 150 150 186 100 186 C50 186 28 150 44 110 C60 70 72 36 100 36 Z',
-  ];
-  const topY = [40, 30, 62, 36][L.shape];
-  const tops = [
-    `<path d="M70 ${topY + 14} L60 ${topY - 22} L88 ${topY + 6} Z M130 ${topY + 14} L140 ${topY - 22} L112 ${topY + 6} Z" fill="${silhouette ? '#000' : acc}"/>`,
-    `<ellipse cx="72" cy="${topY - 8}" rx="11" ry="30" fill="${dark}" transform="rotate(-15 72 ${topY})"/><ellipse cx="128" cy="${topY - 8}" rx="11" ry="30" fill="${dark}" transform="rotate(15 128 ${topY})"/>`,
-    `<path d="M100 ${topY + 4} Q96 ${topY - 20} 112 ${topY - 30}" stroke="${dark}" stroke-width="5" fill="none"/><ellipse cx="118" cy="${topY - 30}" rx="14" ry="8" fill="${silhouette ? '#000' : '#4bd37b'}" transform="rotate(-25 118 ${topY - 30})"/>`,
-    `<path d="M76 ${topY + 8} L84 ${topY - 16} L92 ${topY + 2} L100 ${topY - 22} L108 ${topY + 2} L116 ${topY - 16} L124 ${topY + 8} Z" fill="${silhouette ? '#000' : acc}"/>`,
-    `<circle cx="100" cy="${topY - 14}" r="12" fill="${silhouette ? '#000' : acc}"/><path d="M100 ${topY + 4} L100 ${topY - 4}" stroke="${dark}" stroke-width="5"/>`,
-  ];
-  const eyeY = topY + (186 - topY) * 0.38;
-  const eyeSets = { 1: [100], 2: [78, 122], 3: [70, 100, 130] }[L.eyes];
-  const er = L.eyes === 1 ? 22 : L.eyes === 3 ? 12 : 16;
-  const eyes = silhouette ? '' : eyeSets.map(x => `
-    <circle cx="${x}" cy="${eyeY}" r="${er}" fill="#fff"/>
-    <circle class="pupil" cx="${x + 2}" cy="${eyeY + 3}" r="${er * 0.58}" fill="#22183f"/>
-    <circle cx="${x + er * 0.35}" cy="${eyeY - er * 0.3}" r="${er * 0.25}" fill="#fff"/>`).join('');
-  const my = eyeY + er + 16;
-  const mouth = silhouette ? '' : [
-    `<path d="M86 ${my} Q100 ${my + 14} 114 ${my}" stroke="#22183f" stroke-width="5" fill="none" stroke-linecap="round"/>`,
-    `<path d="M84 ${my - 2} Q100 ${my + 20} 116 ${my - 2} Z" fill="#22183f"/><path d="M92 ${my + 4} Q100 ${my + 12} 108 ${my + 4} Z" fill="#ff6f91"/>`,
-    `<path d="M86 ${my} Q100 ${my + 12} 114 ${my}" stroke="#22183f" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M92 ${my + 3} l4 8 l4 -7 Z" fill="#fff"/>`,
-  ][L.mouth];
-  const spots = L.spots && !silhouette
-    ? `<circle cx="58" cy="140" r="9" fill="${dark}" opacity=".35"/><circle cx="146" cy="128" r="7" fill="${dark}" opacity=".35"/><circle cx="140" cy="158" r="5" fill="${dark}" opacity=".35"/>`
-    : '';
-  return `<svg class="wl-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <defs><radialGradient id="${id}b" cx="38%" cy="32%" r="75%">
-    <stop offset="0" stop-color="hsl(${L.hue} 95% 78%)"/><stop offset=".6" stop-color="hsl(${L.hue} 80% 60%)"/><stop offset="1" stop-color="hsl(${L.hue} 70% 45%)"/>
-  </radialGradient></defs>
-  <ellipse cx="100" cy="192" rx="56" ry="7" fill="#000" opacity="${silhouette ? 0.08 : 0.15}"/>
-  <g class="wl-body" ${silhouette ? 'opacity=".22"' : ''}>
-    ${tops[L.top]}
-    <ellipse cx="70" cy="184" rx="18" ry="9" fill="${dark}"/><ellipse cx="130" cy="184" rx="18" ry="9" fill="${dark}"/>
-    <path d="${shapes[L.shape]}" fill="${body}"/>
-    ${silhouette ? '' : `<ellipse cx="100" cy="158" rx="40" ry="22" fill="${belly}" opacity=".85"/>`}
-    ${spots}${eyes}${mouth}
-    ${silhouette ? '' : `<ellipse cx="78" cy="${topY + 22}" rx="16" ry="7" fill="#fff" opacity=".35" transform="rotate(-20 78 ${topY + 22})"/>`}
-  </g>
-</svg>`;
+// The Wordlings are cute baby animals drawn in babies.js (same ids and names as always).
+// opts.shell shows a bit of eggshell on a newly hatched one.
+export function wordlingSVG(name, silhouette = false, opts = {}) {
+  return babySVG(name, silhouette, opts.shell ? { ...opts, hue: wordlingLook(name).hue } : opts);
 }
 
 export function eggSVG(name, cracks = 0, golden = false) {
@@ -150,18 +109,5 @@ export function eggSVG(name, cracks = 0, golden = false) {
   <circle cx="116" cy="172" r="8" fill="${c2}" opacity=".5"/><circle cx="92" cy="70" r="7" fill="${c2}" opacity=".5"/>
   <ellipse cx="74" cy="66" rx="12" ry="22" fill="#fff" opacity=".6" transform="rotate(20 74 66)"/>
   ${crackPaths}
-</svg>`;
-}
-
-export function rocketSVG() {
-  return `<svg class="rocket-svg" viewBox="0 0 120 220" xmlns="http://www.w3.org/2000/svg">
-  <defs><linearGradient id="rk" x1="0" x2="1"><stop offset="0" stop-color="#e8ecff"/><stop offset=".5" stop-color="#fff"/><stop offset="1" stop-color="#c3c9f5"/></linearGradient></defs>
-  <g class="flame"><path d="M44 178 Q60 230 76 178 Z" fill="#ffb000"/><path d="M50 178 Q60 210 70 178 Z" fill="#fff36b"/></g>
-  <path d="M30 150 L8 186 L34 176 Z" fill="#ff5d73"/><path d="M90 150 L112 186 L86 176 Z" fill="#ff5d73"/>
-  <path d="M60 6 C92 36 96 100 90 176 L30 176 C24 100 28 36 60 6 Z" fill="url(#rk)" stroke="#7b84d6" stroke-width="2"/>
-  <path d="M60 6 C74 20 82 36 86 52 L34 52 C38 36 46 20 60 6 Z" fill="#ff5d73"/>
-  <circle cx="60" cy="96" r="20" fill="#5bc8ff" stroke="#7b84d6" stroke-width="5"/>
-  <circle cx="54" cy="90" r="6" fill="#fff" opacity=".7"/>
-  <rect x="50" y="170" width="20" height="12" rx="3" fill="#7b84d6"/>
 </svg>`;
 }

@@ -62,6 +62,9 @@ OUT.mkdir(parents=True, exist_ok=True)
 WAV.mkdir(parents=True, exist_ok=True)
 cache = json.loads(CACHE.read_text()) if CACHE.exists() else {}
 flags = json.loads(FLAGS.read_text(encoding="utf-8")) if FLAGS.exists() else {}
+# Clips the owner picked by ear (work/audio_locked.json). Never re-rendered, not even with --force.
+LOCKED = ROOT / "work" / "audio_locked.json"
+locked = set(json.loads(LOCKED.read_text(encoding="utf-8"))) if LOCKED.exists() else set()
 NUM = {"10": "ten", "6": "six", "4": "four", "2": "two", "1": "one", "5": "five", "9": "nine"}
 
 
@@ -183,7 +186,7 @@ def render(it):
 items = json.loads((ROOT / "work" / "manifest.json").read_text(encoding="utf-8"))
 done = skipped = failed = 0
 for it in items:
-    if (only and not it["id"].startswith(only)) or it["id"].startswith("p_"):
+    if (only and not it["id"].startswith(only)) or it["id"].startswith("p_") or it["id"] in locked:
         continue
     if retry and it["id"] not in flags:
         continue

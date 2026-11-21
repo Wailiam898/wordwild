@@ -88,7 +88,7 @@ with sync_playwright() as p:
         page.screenshot(path=str(OUT / f"{tag}-map-end.png"))
         page.evaluate("document.querySelectorAll('.world-banner')[5].scrollIntoView()")
         page.wait_for_timeout(400)
-        page.screenshot(path=str(OUT / f"{tag}-map-space.png"))
+        page.screenshot(path=str(OUT / f"{tag}-map-world6.png"))
         page.locator(".dock-btn", has_text="Play").tap(force=True)
         page.wait_for_timeout(600)
         page.screenshot(path=str(OUT / f"{tag}-arcade.png"))
@@ -111,7 +111,7 @@ with sync_playwright() as p:
             failures.append(f"{tag}: page errors: {errors[:6]}")
         browser.close()
 
-want = {"pop", "meet", "blast", "forge", "heart", "pip", "story", "chop", "memory", "ladder", "sort", "build", "silly", "fix", "dict", "finish", "speed"}
+want = {"pop", "meet", "hop", "forge", "heart", "pip", "story", "chop", "memory", "ladder", "sort", "build", "silly", "fix", "dict", "finish", "speed"}
 missing = want - seen_types
 if missing:
     print("activities not reached:", sorted(missing))

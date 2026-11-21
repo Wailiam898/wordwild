@@ -13,12 +13,34 @@
     const st = q('.stage');
     if (q('.modal')) return;
     if (q('.play')) return tapEl(q('.play'));
+    // Tests can ask the bot to open daily practice (from the map button, or from the "you finished" screen).
+    if (window.autoWant === 'practice' && !q('.stage')) { const f = q('.practice-fab') || q('.fin-practice'); if (f) return tapEl(f); }
+    if (window.autoWant === 'books' && !q('.stage')) { const f = q('.fin-books'); if (f) return tapEl(f); }
     if (q('.node.current')) return tapEl(q('.node.current'));
     if (q('.hatch-egg') && !q('.hatch-egg.burst')) return tapEl(q('.hatch-egg'));
     if (q('.reward-row .go')) { if (!log.includes('lesson done')) log.push('lesson done'); window.stopAuto && stopAuto(); return; }
     if (!st) return;
+    // Letter tracing: draw the current stroke with real pointer events along the guide line.
+    const tsvg = st.querySelector('.trace-svg');
+    if (tsvg) {
+      const cur = tsvg.querySelector('.tr-guide.cur');
+      if (!cur) return;
+      const m = cur.getScreenCTM();
+      const toClient = (x, y) => { const p = new DOMPoint(x, y).matrixTransform(m); return { clientX: p.x, clientY: p.y }; };
+      const fire = (type, pt) => tsvg.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch', isPrimary: true, ...pt }));
+      if (cur.tagName === 'circle') { fire('pointerdown', toClient(+cur.getAttribute('cx'), +cur.getAttribute('cy'))); fire('pointerup', toClient(+cur.getAttribute('cx'), +cur.getAttribute('cy'))); log.push('trace dot'); return; }
+      const L = cur.getTotalLength(), pts = [];
+      for (let d = 0; d <= L; d += 4) { const q = cur.getPointAtLength(d); pts.push(toClient(q.x, q.y)); }
+      const e = cur.getPointAtLength(L); pts.push(toClient(e.x, e.y));
+      fire('pointerdown', pts[0]);
+      pts.slice(1).forEach(p => fire('pointermove', p));
+      fire('pointerup', pts[pts.length - 1]);
+      log.push('trace stroke');
+      return;
+    }
+    // Story questions (pictures or words): the right answer carries data-ok like every other choice.
     const ok = st.querySelector('[data-ok]:not(.locked):not(.right)');
-    if (ok && !st.dataset.ok) { log.push('ok ' + st.className); return tapEl(ok); }
+    if (ok && !st.dataset.ok) { log.push(st.querySelector('.big-ear') ? 'question' : 'ok ' + st.className); return tapEl(ok); }
     const field = st.querySelector('.pop-field');
     if (field) {
       const b = [...field.querySelectorAll('.bubble:not(.popped)')].find(b => b.dataset.g === field.dataset.target && b.getBoundingClientRect().top < innerHeight - 60);
@@ -50,7 +72,9 @@
       if (t) { tapEl(t); delete st.dataset.pending; }
       return;
     }
-    const go = st.querySelector('.btn.go'); if (go) { log.push('go'); return tapEl(go); }
+    // Story pages: tap every word in order (the glowing one), then the next button opens.
+    const nw = st.querySelector('.story-text .sw.next'); if (nw) { log.push('word'); return tapEl(nw); }
+    const go = st.querySelector('.btn.go:not([disabled])'); if (go) { log.push('go'); return tapEl(go); }
   };
   window.startAuto = (ms = 1000) => {
     window.stopAuto && stopAuto();

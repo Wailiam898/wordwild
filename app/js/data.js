@@ -121,7 +121,7 @@ export const HEART = {
 // Each lesson's words must be decodable with graphemes taught so far.
 export const WORLDS = [
   {
-    id: 'sands', name: 'Sunny Sands', theme: 'sands',
+    id: 'sands', name: 'Sunny Farm', theme: 'farm',
     lessons: [
       { id: 'L1', g: ['s', 'a', 't', 'p', 'i', 'n'], heart: [],
         words: 'tap:🚰 pin:📌 pan:🍳 nap:😴 sit:🧘 ant:🐜 sip:🥤 sat tin it in an pit tip nip pat spin snap',
@@ -138,7 +138,7 @@ export const WORLDS = [
     ],
   },
   {
-    id: 'jungle', name: 'Jungle Jumble', theme: 'jungle',
+    id: 'jungle', name: 'Meadow Muddle', theme: 'meadow',
     lessons: [
       { id: 'L5', g: ['c', 'k', 'ck'], heart: [],
         words: 'cat:🐱 can:🥫 cap:🧢 sock:🧦 sick:🤒 kid:🧒 kick cot kit tick pick sack dock',
@@ -158,7 +158,7 @@ export const WORLDS = [
     ],
   },
   {
-    id: 'volcano', name: 'Volcano Valley', theme: 'volcano',
+    id: 'volcano', name: 'Duck Pond', theme: 'pond',
     lessons: [
       { id: 'L10', g: ['j', 'v', 'w'], heart: ['he', 'she'],
         words: 'jet:✈️ jam:🍯 van:🚐 vet:🩺 web:🕸️ wet:💦 win:🏆 wig jug job wag twig',
@@ -178,7 +178,7 @@ export const WORLDS = [
     ],
   },
   {
-    id: 'caves', name: 'Crystal Caves', theme: 'caves',
+    id: 'caves', name: 'Barn Loft', theme: 'loft',
     lessons: [
       { id: 'L15', g: ['ai', 'ee'], heart: ['they'],
         words: 'rain:🌧️ snail:🐌 train:🚂 mail:📬 tree:🌳 bee:🐝 feet:🦶 sheep:🐑 seed:🌱 see:👀 tail wait green',
@@ -198,7 +198,7 @@ export const WORLDS = [
     ],
   },
   {
-    id: 'clouds', name: 'Cloud Kingdom', theme: 'clouds',
+    id: 'clouds', name: 'Cloud Coop', theme: 'coop',
     lessons: [
       { id: 'L20', g: [], focus: 'blends: cr, fl, st…', heart: ['do', 'have'],
         words: 'crab:🦀 drum:🥁 plug:🔌 sled:🛷 swim:🏊 truck:🚚 brush:🪥 clock:🕰️ stop:🛑 clap:👏 grab grin plan glad slip step trip flat',
@@ -218,7 +218,7 @@ export const WORLDS = [
     ],
   },
   {
-    id: 'reef', name: 'Coral Reef', theme: 'reef',
+    id: 'reef', name: 'Seaside Shells', theme: 'shore',
     lessons: [
       { id: 'L25', g: ['ay', 'ou'], heart: ['little'],
         words: 'play:🛝 hay:🌾 tray:🍱 spray:🧴 cloud:☁️ mouth:👄 shout:📢 couch:🛋️ snout:🐽 sprout:🌱 day say stay way out loud round found',
@@ -238,7 +238,7 @@ export const WORLDS = [
     ],
   },
   {
-    id: 'space', name: 'Star Station', theme: 'space',
+    id: 'space', name: 'Starry Night Roost', theme: 'roost',
     lessons: [
       { id: 'L30', g: ['a_e'], heart: ['could', 'would'],
         words: 'cake:🎂 cape:🦸 tape:📼 gate:🚧 snake:🐍 plane:✈️ grape:🍇 lake:🏞️ skate:⛸️ game:🎮 made name same shake',
@@ -283,9 +283,9 @@ export const SENTENCES = {
   L19: ['The cow is in the town.|🐄🏘️', 'An owl sat in the tree.|🦉🌳', 'Boil the oil.|🫕', '!The cow has a crown.|🐄👑', '!The coin can hoot.|🪙🦉'],
   L20: ['The crab is on the sand.|🦀', 'Do you have a drum?|🥁', 'Stop the truck!|🛑🚚', 'We swim in the pond.|🏊', '!The clock can swim.|🕰️🏊', '!A sled can clap.|🛷👏'],
   L21: ['Some milk is in the cup.|🥛', 'Come and jump!|🦘', 'The ant is in the tent.|🐜⛺', '!A lamp can jump.|🪔', '!The skunk has a mask.|🦨🎭'],
-  L22: ['One rabbit is in the basket.|🐇🧺', 'The kitten has a magnet.|🐈🧲', 'We were at the picnic.|🧺', '!The rocket is in the pumpkin.|🚀🎃', '!A helmet can sing.|⛑️🎤'],
+  L22: ['One rabbit is in the basket.|🐇🧺', 'The kitten has a magnet.|🐈🧲', 'We were at the picnic.|🧺', '!The rabbit is in the pumpkin.|🐇🎃', '!A helmet can sing.|⛑️🎤'],
   L23: ['There is a puppy.|🐶', 'What a funny teddy!|🧸', 'The bunny is jumping.|🐰', '!The lolly is sleeping.|🍭😴', '!A teddy is fishing.|🧸🎣'],
-  L24: ['What is in the basket?|🧺', 'The puppy is swimming in the pond.|🐶🏊', '!The kitten is fishing for a rocket.|🐈🚀'],
+  L24: ['What is in the basket?|🧺', 'The puppy is swimming in the pond.|🐶🏊', '!The kitten is fishing for a pumpkin.|🐈🎃'],
   L25: ['We play out in the sun.|☀️', 'Shout out loud!|📢', 'The pig has a snout.|🐽', '!The couch can shout.|🛋️📢', '!A cloud is in my mouth.|☁️👄'],
   L26: ['We eat a peach on the beach.|🍑🏖️', 'The seal is in the sea.|🦭', 'Here is my pie.|🥧', 'A fly is in the sky.|🪰', '!The pie can fly.|🥧🪰', '!A seal has a tie.|🦭👔'],
   L27: ['The boy has a toy.|👦🧸', 'The girl has a bird.|👧🐦', 'Her sister has a letter.|✉️', '!The monster is in my shirt.|👾👕', '!A bird can stir the butter.|🐦🧈'],
@@ -317,14 +317,20 @@ export const STORIES = {
     { t: 'Pip sips.', pic: '🥤' },
     { t: 'Tip, tip, tip.', pic: '💧💧💧' },
     { t: 'Pip naps.', pic: '😴💤' },
-  ], q: { text: 'What did Pip do at the end?', opts: ['😴', '🥤', '🏃'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did Pip do at the end?', opts: ['😴', '🥤', '🏃'], a: 0 },
+    { k: 'lit', text: 'What did Pip do first?', opts: ['🧘', '🏃', '💃'], a: 0 },
+  ] },
   dadsam: { title: 'Dad and Sam', cover: '🍳', pages: [
     { t: 'Sam and Dad sit.', pic: '👨‍👦🪑' },
     { t: 'Dad taps the pan.', pic: '🍳🥄' },
     { t: 'Sam taps the pan.', pic: '🍳👦' },
     { t: 'Tap, tap, tap!', pic: '🥁🎶' },
     { t: 'I nap, said Dad.', pic: '😴' },
-  ], q: { text: 'What did Sam and Dad tap?', opts: ['🍳', '🚪', '🥁'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did Sam and Dad tap?', opts: ['🍳', '🚪', '🥁'], a: 0 },
+    { k: 'lit', text: 'Who said, I nap?', opts: ['Dad', 'Sam', 'Pip'], a: 0 },
+  ] },
   map: { title: 'The Map', cover: '🗺️', pages: [
     { t: 'Pip and Sam sit.', pic: '🏖️' },
     { t: 'Pip taps the map.', pic: '🗺️' },
@@ -332,42 +338,60 @@ export const STORIES = {
     { t: 'An ant!', pic: '🐜❗' },
     { t: 'The ant sits in the pan.', pic: '🐜🍳' },
     { t: 'Sam and Pip nap.', pic: '😴💤' },
-  ], q: { text: 'What sat in the pan?', opts: ['🐶', '🐜', '🗺️'], a: 1 } },
+  ], qs: [
+    { k: 'lit', text: 'What sat in the pan?', opts: ['🐶', '🐜', '🗺️'], a: 1 },
+    { k: 'lit', text: 'Who tapped the map?', opts: ['Pip', 'Sam', 'Dad'], a: 0 },
+  ] },
   dig: { title: 'Dig, Dog, Dig!', cover: '🐶', pages: [
     { t: 'A dog digs.', pic: '🐶⛏️' },
     { t: 'Dig, dig, dig!', pic: '🟫🟫🟫' },
     { t: 'The dog got a pot.', pic: '🐶🍲' },
     { t: 'A pig! A pig in the pot!', pic: '🐷🍲' },
     { t: 'The pig and the dog nod.', pic: '🐷🤝🐶' },
-  ], q: { text: 'What was in the pot?', opts: ['🐱', '🐷', '🦆'], a: 1 } },
+  ], qs: [
+    { k: 'lit', text: 'What was in the pot?', opts: ['🐱', '🐷', '🦆'], a: 1 },
+    { k: 'lit', text: 'Who dug?', opts: ['🐶', '🐷', '🐱'], a: 0 },
+  ] },
   sock: { title: 'The Sock', cover: '🧦', pages: [
     { t: 'Kim got a sock.', pic: '👧🧦' },
     { t: 'The cat got the sock!', pic: '🐱🧦' },
     { t: 'Kim and the cat spin and spin.', pic: '👧🌀🐱' },
     { t: 'Kick, kick, kick!', pic: '🦵🦵🦵' },
     { t: 'Kim and the cat nap on the cot.', pic: '😴🐱🛏️' },
-  ], q: { text: 'Who took the sock?', opts: ['🐶', '🐱', '🐷'], a: 1 } },
+  ], qs: [
+    { k: 'lit', text: 'Who took the sock?', opts: ['🐶', '🐱', '🐷'], a: 1 },
+    { k: 'lit', text: 'What did Kim and the cat do on the cot?', opts: ['😴', '🏃', '🍽️'], a: 0 },
+  ] },
   duck: { title: 'Up, Duck, Up!', cover: '🦆', pages: [
     { t: 'A duck sat in the sun.', pic: '🦆☀️' },
     { t: 'The duck got up.', pic: '🦆⬆️' },
     { t: 'Up, up, up!', pic: '🦆☁️' },
     { t: 'The duck sits in mud!', pic: '🦆🟫' },
     { t: 'The duck sat in a cup.', pic: '🦆☕' },
-  ], q: { text: 'Where did the duck sit at the end?', opts: ['☕', '🛏️', '🚌'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the duck sit at the end?', opts: ['☕', '🛏️', '🚌'], a: 0 },
+    { k: 'lit', text: 'What was in the sky at the start?', opts: ['☀️', '🌙', '🌈'], a: 0 },
+  ] },
   bus: { title: 'The Big Bus', cover: '🚌', pages: [
     { t: 'Rob runs to the bus.', pic: '🏃🚌' },
     { t: 'Go, bus, go!', pic: '🚌💨' },
     { t: 'Bump! The bus hits a rock.', pic: '🚌🪨' },
     { t: 'The hat on Rob pops up.', pic: '🎩⬆️' },
     { t: 'No hat! A hen got it!', pic: '🐔🎩' },
-  ], q: { text: 'Where did the hat land?', opts: ['🐔', '🚌', '🐶'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the hat land?', opts: ['🐔', '🚌', '🐶'], a: 0 },
+    { k: 'lit', text: 'Who ran to the bus?', opts: ['Rob', 'Ben', 'Pip'], a: 0 },
+  ] },
   frog: { title: 'Frog on a Log', cover: '🐸', pages: [
     { t: 'A frog sits on a log.', pic: '🐸🪵' },
     { t: 'The log is on a big hill.', pic: '🪵⛰️' },
     { t: 'Puff, puff! It is a big hill.', pic: '🐸💦⛰️' },
     { t: 'The frog fell off the log!', pic: '🐸💫' },
     { t: 'Plop! The frog is in the mud.', pic: '🐸🟫' },
-  ], q: { text: 'Where did the frog land?', opts: ['🟫', '🌳', '🚌'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the frog land?', opts: ['🟫', '🌳', '🚌'], a: 0 },
+    { k: 'lit', text: 'What did the frog sit on at the start?', opts: ['🪵', '🚌', '🪨'], a: 0 },
+  ] },
   hill: { title: 'Up the Hill', cover: '⛰️', pages: [
     { t: 'Ben and his dog run up the hill.', pic: '👦🐶⛰️' },
     { t: 'The sun is hot.', pic: '☀️🔥' },
@@ -375,35 +399,52 @@ export const STORIES = {
     { t: 'The dog licks the cup.', pic: '🐶☕' },
     { t: 'Ben and the dog sit on the hill.', pic: '👦🐶⛰️' },
     { t: 'The end!', pic: '🎉' },
-  ], q: { text: 'Who licked the cup?', opts: ['👦', '🐶', '🐸'], a: 1 } },
+  ], qs: [
+    { k: 'lit', text: 'Who licked the cup?', opts: ['👦', '🐶', '🐸'], a: 1 },
+    { k: 'lit', text: 'What was hot?', opts: ['☀️', '🧊', '🌧️'], a: 0 },
+  ] },
   van: { title: 'The Vet Van', cover: '🚐', pages: [
     { t: 'The vet has a van.', pic: '🩺🚐' },
     { t: 'She gets in the van.', pic: '👩‍⚕️🚐' },
     { t: 'A wet dog is sick.', pic: '🐶💦🤒' },
     { t: 'The vet pets him. He wags and wags!', pic: '👩‍⚕️🐶' },
     { t: 'The dog is well.', pic: '🐶😄' },
-  ], q: { text: 'Who was sick?', opts: ['🐱', '🐶', '🐷'], a: 1 } },
+  ], qs: [
+    { k: 'lit', text: 'Who was sick?', opts: ['🐱', '🐶', '🐷'], a: 1 },
+    { k: 'lit', text: 'Who has a van?', opts: ['vet', 'pig', 'cat'], a: 0 },
+    { k: 'think', text: 'How did the dog feel at the end?', opts: ['😄', '😢', '😠'], a: 0 },
+  ] },
   fox: { title: 'Fox in a Box', cover: '🦊', pages: [
     { t: 'A fox is in a box.', pic: '🦊📦' },
     { t: 'Buzz! A bug zips in.', pic: '🐝💨' },
     { t: 'Yell! The fox jumps up.', pic: '🦊❗' },
     { t: 'Quick, fox, quick!', pic: '🦊💨' },
     { t: 'We will get it, said the fox.', pic: '🦊🐝' },
-  ], q: { text: 'What zipped into the box?', opts: ['🐝', '🐸', '🦆'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What zipped into the box?', opts: ['🐝', '🐸', '🦆'], a: 0 },
+    { k: 'think', text: 'Why did the fox jump up?', opts: ['🐝', '🌧️', '🐟'], a: 0 },
+  ] },
   ship: { title: 'The Fish Ship', cover: '🚢', pages: [
     { t: 'Josh has a ship.', pic: '👦🚢' },
     { t: 'The ship gets fish and fish and fish!', pic: '🚢🐟🐟' },
     { t: 'Josh chops the fish.', pic: '🔪🐟' },
     { t: 'The fish is in a dish.', pic: '🐟🍽️' },
     { t: 'Yum! It was a top dish!', pic: '😋🍽️' },
-  ], q: { text: 'What did Josh put in the dish?', opts: ['🐟', '🍟', '🥜'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did Josh put in the dish?', opts: ['🐟', '🍟', '🥜'], a: 0 },
+    { k: 'think', text: 'How did Josh feel at the end?', opts: ['😋', '😢', '😴'], a: 0 },
+  ] },
   king: { title: 'The King Sings', cover: '🤴', pages: [
     { t: 'The king has a long song.', pic: '🤴🎵' },
     { t: 'He sings and sings.', pic: '🤴🎤' },
     { t: 'The moth sings with him.', pic: '🦋🎵' },
     { t: 'Then a bell rings. Ding!', pic: '🔔' },
     { t: 'You sing! said the king.', pic: '🤴👉' },
-  ], q: { text: 'Who sang with the king?', opts: ['🦋', '🐶', '🐟'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who sang with the king?', opts: ['🦋', '🐶', '🐟'], a: 0 },
+    { k: 'lit', text: 'What rang?', opts: ['🔔', '🥁', '📞'], a: 0 },
+    { k: 'think', text: 'How did the moth feel when it sang with the king?', opts: ['😊', '😢', '😠'], a: 0 },
+  ] },
   quest: { title: 'The Big Quest', cover: '🗺️', pages: [
     { t: 'Pip has a map and a backpack.', pic: '🗺️🎒' },
     { t: 'Pip gets on a ship.', pic: '🚢' },
@@ -411,35 +452,51 @@ export const STORIES = {
     { t: 'A fox and a king wish Pip luck.', pic: '🦊🤴' },
     { t: 'At the top is a chest.', pic: '🧰' },
     { t: 'It is rich with gems!', pic: '💎💎💎' },
-  ], q: { text: 'What was in the chest?', opts: ['💎', '🐟', '🧦'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What was in the chest?', opts: ['💎', '🐟', '🧦'], a: 0 },
+    { k: 'think', text: 'What did Pip do after the ship?', opts: ['🏃', '😴', '🍳'], a: 0 },
+  ] },
   snail: { title: 'Snail in the Rain', cover: '🐌', pages: [
     { t: 'It is raining.', pic: '🌧️' },
     { t: 'A snail sits on a tree.', pic: '🐌🌳' },
     { t: 'They see a bee in the rain.', pic: '🐌🐝🌧️' },
     { t: 'The bee is wet and sad.', pic: '🐝😢' },
     { t: 'Sit with me, said the snail. The bee is snug.', pic: '🐌🐝😊' },
-  ], q: { text: 'Who did the snail help?', opts: ['🐝', '🐑', '🐌'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who did the snail help?', opts: ['🐝', '🐑', '🐌'], a: 0 },
+    { k: 'think', text: 'Why was the bee sad?', opts: ['💦', '🌞', '🍯'], a: 0 },
+  ] },
   goat: { title: 'The Goat Boat', cover: '🐐', pages: [
     { t: 'A goat has a red boat.', pic: '🐐⛵' },
     { t: 'At night the goat gets in the boat.', pic: '🐐⛵🌃' },
     { t: 'A toad sees a light.', pic: '🐸💡' },
     { t: 'My boat! said the goat.', pic: '🐐⛵' },
     { t: 'The goat and the toad float on the pond.', pic: '🐐🐸🌊' },
-  ], q: { text: 'Who was in the boat with the goat?', opts: ['🐸', '🐄', '🦉'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who was in the boat with the goat?', opts: ['🐸', '🐄', '🦉'], a: 0 },
+    { k: 'lit', text: 'What colour was the boat?', opts: ['🔴', '🔵', '🟢'], a: 0 },
+    { k: 'think', text: 'How did the goat feel at the end?', opts: ['😊', '😢', '😠'], a: 0 },
+  ] },
   moon: { title: 'Zoom to the Moon', cover: '🌙', pages: [
     { t: 'Pip and Mark are in a car.', pic: '🚗' },
     { t: 'The car is a star car!', pic: '🚗⭐' },
     { t: 'Zoom! Zoom! It is far.', pic: '💨⭐⭐' },
     { t: 'They are on the moon!', pic: '🌙' },
     { t: 'All the stars wink at them.', pic: '⭐⭐⭐' },
-  ], q: { text: 'Where did the car go?', opts: ['🌙', '🌳', '🏪'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the car go?', opts: ['🌙', '🌳', '🏪'], a: 0 },
+    { k: 'think', text: 'How did Pip and Mark get to the moon?', opts: ['🚗', '🚲', '🚌'], a: 0 },
+  ] },
   storm: { title: 'The Storm', cover: '⛈️', pages: [
     { t: 'A storm hits the farm.', pic: '⛈️🚜' },
     { t: 'The goat runs to the barn.', pic: '🐐🛖' },
     { t: 'Her hat turns and turns.', pic: '👒💨' },
     { t: 'The corn gets wet.', pic: '🌽💦' },
     { t: 'Then the sun is back!', pic: '☀️😄' },
-  ], q: { text: 'What came back at the end?', opts: ['☀️', '🌧️', '🌙'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What came back at the end?', opts: ['☀️', '🌧️', '🌙'], a: 0 },
+    { k: 'think', text: 'Why did the goat run to the barn?', opts: ['⛈️', '🍎', '🎂'], a: 0 },
+  ] },
   crown: { title: 'The Lost Crown', cover: '👑', pages: [
     { t: 'The king lost his crown.', pic: '🤴❓' },
     { t: 'An owl is up in a tree.', pic: '🦉🌳' },
@@ -447,7 +504,11 @@ export const STORIES = {
     { t: 'Hoot! The owl points at a coin.', pic: '🦉🪙' },
     { t: 'The crown is in the town!', pic: '👑🏘️' },
     { t: 'Now the king is glad!', pic: '🤴👑🎉' },
-  ], q: { text: 'Who pointed at the coin?', opts: ['🦉', '🐄', '🐐'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who pointed at the coin?', opts: ['🦉', '🐄', '🐐'], a: 0 },
+    { k: 'lit', text: 'What did the king lose?', opts: ['👑', '🐄', '🌳'], a: 0 },
+    { k: 'think', text: 'Why was the king sad at the start?', opts: ['no crown', 'no cat', 'no sun'], a: 0 },
+  ] },
   crab: { title: 'Crab and Frog', cover: '🦀', pages: [
     { t: 'Crab sits on the sand.', pic: '🦀🏖️' },
     { t: 'Frog hops up with a drum.', pic: '🐸🥁' },
@@ -455,7 +516,10 @@ export const STORIES = {
     { t: 'No, but I can clap! said Crab.', pic: '🦀👏' },
     { t: 'Frog drums and Crab claps.', pic: '🐸🥁🦀👏' },
     { t: 'It is a big band!', pic: '🎶🎉' },
-  ], q: { text: 'What did Crab do?', opts: ['👏', '🥁', '🏊'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did Crab do?', opts: ['👏', '🥁', '🏊'], a: 0 },
+    { k: 'think', text: 'Why did Crab clap?', opts: ['no drum', 'a hot sun', 'a big tent'], a: 0 },
+  ] },
   tent: { title: 'The Big Tent', cover: '⛺', pages: [
     { t: 'Come and help! said Mum.', pic: '👩⛺' },
     { t: 'We set up the tent.', pic: '⛺🔨' },
@@ -463,7 +527,10 @@ export const STORIES = {
     { t: 'Jump in! said Mum.', pic: '🦘⛺' },
     { t: 'The tent bends in the wind.', pic: '⛺🌬️' },
     { t: 'We sit and sip milk in the tent.', pic: '🥛😊' },
-  ], q: { text: 'What was in the tent?', opts: ['🥛', '🐟', '🚌'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What was in the tent?', opts: ['🥛', '🐟', '🚌'], a: 0 },
+    { k: 'think', text: 'Why did the tent bend?', opts: ['🌬️', '🐄', '🍪'], a: 0 },
+  ] },
   rocket: { title: 'Rocket Picnic', cover: '🚀', pages: [
     { t: 'Ben has a rocket.', pic: '👦🚀' },
     { t: 'Ben and his kitten get in the rocket.', pic: '👦🐈🚀' },
@@ -471,7 +538,11 @@ export const STORIES = {
     { t: 'They land on the moon.', pic: '🚀🌙' },
     { t: 'One picnic basket. Yum!', pic: '🧺😋' },
     { t: 'The kitten naps in the basket.', pic: '🐈🧺😴' },
-  ], q: { text: 'Where did the rocket land?', opts: ['🌙', '🌳', '🏪'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the rocket land?', opts: ['🌙', '🌳', '🏪'], a: 0 },
+    { k: 'lit', text: 'Who got in the rocket with Ben?', opts: ['🐈', '🐶', '🐸'], a: 0 },
+    { k: 'think', text: 'How did Ben feel about the picnic?', opts: ['😋', '😢', '😠'], a: 0 },
+  ] },
   puppy: { title: 'Silly Puppy', cover: '🐶', pages: [
     { t: 'There is a puppy in the mud.', pic: '🐶🟫' },
     { t: 'The puppy is muddy!', pic: '🐶💩' },
@@ -479,7 +550,10 @@ export const STORIES = {
     { t: 'The puppy is jumping and running.', pic: '🐶🏃' },
     { t: 'Then the puppy is sleeping on my teddy.', pic: '🐶🧸😴' },
     { t: 'Funny puppy!', pic: '🐶😄' },
-  ], q: { text: 'Where did the puppy sleep?', opts: ['🧸', '🛁', '🚗'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the puppy sleep?', opts: ['🧸', '🛁', '🚗'], a: 0 },
+    { k: 'think', text: 'Why was the puppy muddy?', opts: ['🟫', '🛁', '🍦'], a: 0 },
+  ] },
   windy: { title: 'Windy Hill', cover: '🌬️', pages: [
     { t: 'It is windy on the hill.', pic: '🌬️⛰️' },
     { t: 'Jess has a red flag.', pic: '👧🚩' },
@@ -487,7 +561,10 @@ export const STORIES = {
     { t: 'Up, up! The flag and Jess lift up!', pic: '👧🚩☁️' },
     { t: 'Jess lands in a big nest.', pic: '👧🪺' },
     { t: 'What a trip!', pic: '😄' },
-  ], q: { text: 'What did Jess hold?', opts: ['🚩', '🪁', '🎈'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did Jess hold?', opts: ['🚩', '🪁', '🎈'], a: 0 },
+    { k: 'think', text: 'Why did Jess lift up?', opts: ['🌬️', '🐘', '🍎'], a: 0 },
+  ] },
   cloud: { title: 'Play in the Clouds', cover: '☁️', pages: [
     { t: 'Max and Pip play out on a cloud.', pic: '👦☁️' },
     { t: 'They jump up and down.', pic: '⬆️⬇️' },
@@ -495,7 +572,11 @@ export const STORIES = {
     { t: 'A little cloud floats past.', pic: '☁️💨' },
     { t: 'Stay and play with us! said Max.', pic: '👦☁️' },
     { t: 'The little cloud stays all day.', pic: '☁️😊' },
-  ], q: { text: 'Who came to play?', opts: ['☁️', '🐶', '🦆'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who came to play?', opts: ['☁️', '🐶', '🦆'], a: 0 },
+    { k: 'lit', text: 'Who played with Pip?', opts: ['Max', 'Ben', 'Rob'], a: 0 },
+    { k: 'think', text: 'How did the little cloud feel?', opts: ['😊', '😢', '😠'], a: 0 },
+  ] },
   beach: { title: 'At the Beach', cover: '🏖️', pages: [
     { t: 'We go to the beach.', pic: '🏖️' },
     { t: 'A seal sits in the sea.', pic: '🦭🌊' },
@@ -503,7 +584,11 @@ export const STORIES = {
     { t: 'A fly lands on my pie!', pic: '🪰🥧' },
     { t: 'Fly, fly, fly up in the sky!', pic: '🪰🌤️' },
     { t: 'Here is a treat for the seal.', pic: '🐟🦭' },
-  ], q: { text: 'What landed on the pie?', opts: ['🪰', '🐦', '🦭'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What landed on the pie?', opts: ['🪰', '🐦', '🦭'], a: 0 },
+    { k: 'lit', text: 'What did they eat?', opts: ['🥧', '🍕', '🍦'], a: 0 },
+    { k: 'think', text: 'How did the seal feel when it got a treat?', opts: ['😊', '😢', '😠'], a: 0 },
+  ] },
   monster: { title: 'The Toy Monster', cover: '👾', pages: [
     { t: 'The boy has a toy monster.', pic: '👦👾' },
     { t: 'The monster has a red shirt.', pic: '👾👕' },
@@ -511,7 +596,10 @@ export const STORIES = {
     { t: 'The bird sits on the monster!', pic: '🐦👾' },
     { t: 'Her bird loves the toy.', pic: '🐦💖' },
     { t: 'Now the boy and the girl enjoy the toy.', pic: '👦👧😊' },
-  ], q: { text: 'Who sat on the monster?', opts: ['🐦', '👦', '🦪'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who sat on the monster?', opts: ['🐦', '👦', '🦪'], a: 0 },
+    { k: 'think', text: 'How did the bird feel about the toy?', opts: ['😍', '😠', '😢'], a: 0 },
+  ] },
   prawn: { title: 'Hawk and Prawn', cover: '🦐', pages: [
     { t: 'A hawk saw a prawn.', pic: '🦅🦐' },
     { t: 'The prawn is in the water.', pic: '🦐🌊' },
@@ -519,7 +607,10 @@ export const STORIES = {
     { t: 'The prawn hid in the weed.', pic: '🦐🌿' },
     { t: 'The hawk did not get it.', pic: '🦅❌' },
     { t: 'The prawn has a new friend, a crab.', pic: '🦐🦀' },
-  ], q: { text: 'Where did the prawn hide?', opts: ['🌿', '🏠', '🚗'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where did the prawn hide?', opts: ['🌿', '🏠', '🚗'], a: 0 },
+    { k: 'think', text: 'Why did the hawk not get the prawn?', opts: ['it hid', 'it flew', 'it sang'], a: 0 },
+  ] },
   reef: { title: 'Under the Sea', cover: '🐠', pages: [
     { t: 'Pip and a fish swim to the reef.', pic: '🐠🪸' },
     { t: 'They see a seal and a prawn.', pic: '🦭🦐' },
@@ -527,7 +618,10 @@ export const STORIES = {
     { t: 'Splash! Pip and the seal play.', pic: '💦🦭' },
     { t: 'Clouds float up high.', pic: '☁️☁️' },
     { t: 'What a day!', pic: '🌞😄' },
-  ], q: { text: 'What did the seal have?', opts: ['🧸', '🍕', '🎈'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did the seal have?', opts: ['🧸', '🍕', '🎈'], a: 0 },
+    { k: 'think', text: 'How did Pip feel at the reef?', opts: ['😄', '😢', '😠'], a: 0 },
+  ] },
   cake: { title: 'The Big Cake', cover: '🎂', pages: [
     { t: 'Kate made a cake.', pic: '👧🎂' },
     { t: 'It was a big cake on a plate.', pic: '🎂🍽️' },
@@ -535,7 +629,11 @@ export const STORIES = {
     { t: 'Can I have some cake? said the snake.', pic: '🐍❓' },
     { t: 'Kate gave the snake a cake.', pic: '👧🎂🐍' },
     { t: 'The snake ate it all!', pic: '🐍😋' },
-  ], q: { text: 'Who ate the cake?', opts: ['🐍', '👧', '🐶'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who ate the cake?', opts: ['🐍', '👧', '🐶'], a: 0 },
+    { k: 'lit', text: 'Who made the cake?', opts: ['Kate', 'Rex', 'Sam'], a: 0 },
+    { k: 'think', text: 'How did the snake feel at the end?', opts: ['😋', '😢', '😠'], a: 0 },
+  ] },
   bike: { title: 'Mike Rides', cover: '🚲', pages: [
     { t: 'Mike has a red bike.', pic: '👦🚲' },
     { t: 'He rides it five times.', pic: '🚲5️⃣' },
@@ -543,7 +641,11 @@ export const STORIES = {
     { t: 'He can see a kite in the sky.', pic: '🪁' },
     { t: 'Mike smiles.', pic: '😊' },
     { t: 'I like my bike! said Mike.', pic: '👦🚲💖' },
-  ], q: { text: 'What did Mike see in the sky?', opts: ['🪁', '🚲', '🌲'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'What did Mike see in the sky?', opts: ['🪁', '🚲', '🌲'], a: 0 },
+    { k: 'lit', text: 'What colour was the bike?', opts: ['🔴', '🔵', '🟢'], a: 0 },
+    { k: 'think', text: 'How did Mike feel about his bike?', opts: ['😍', '😢', '😠'], a: 0 },
+  ] },
   bone: { title: 'The Lost Bone', cover: '🦴', pages: [
     { t: 'Rex had a bone.', pic: '🐶🦴' },
     { t: 'He hid it in a hole.', pic: '🐶🕳️' },
@@ -551,7 +653,11 @@ export const STORIES = {
     { t: 'Then Rex dug and dug. No bone!', pic: '🐶😢' },
     { t: 'A mule saw a bone by a stone.', pic: '🫏🦴🪨' },
     { t: 'Here it is! said the mule.', pic: '🫏🐶🦴' },
-  ], q: { text: 'Where was the bone?', opts: ['🪨', '🏠', '🍦'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Where was the bone?', opts: ['🪨', '🏠', '🍦'], a: 0 },
+    { k: 'lit', text: 'Where did Rex hide the bone?', opts: ['🕳️', '🌳', '🏠'], a: 0 },
+    { k: 'think', text: 'Why did Rex dig and dig?', opts: ['🦴', '🍦', '🐟'], a: 0 },
+  ] },
   whale: { title: 'Whale and Elephant', cover: '🐋', pages: [
     { t: 'A whale and a dolphin play in the sea.', pic: '🐋🐬' },
     { t: 'An elephant comes to the beach.', pic: '🐘🏖️' },
@@ -559,7 +665,10 @@ export const STORIES = {
     { t: 'Splash! The whale sprays her.', pic: '🐋💦🐘' },
     { t: 'Now the elephant is wet!', pic: '🐘💦' },
     { t: 'They all smile.', pic: '🐋🐘🐬😊' },
-  ], q: { text: 'Who got wet?', opts: ['🐘', '🐋', '🐬'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who got wet?', opts: ['🐘', '🐋', '🐬'], a: 0 },
+    { k: 'think', text: 'Why did the elephant get wet?', opts: ['🐋', '🐬', '🌧️'], a: 0 },
+  ] },
   stars: { title: 'Pip and the Stars', cover: '🌟', pages: [
     { t: 'Pip gets in a rocket.', pic: '🚀' },
     { t: 'Zoom! Up and up, past the moon.', pic: '🚀🌙' },
@@ -567,8 +676,139 @@ export const STORIES = {
     { t: 'A cute mule waves at Pip.', pic: '🫏👋' },
     { t: 'They eat cake and play games.', pic: '🎂🎮' },
     { t: 'Time to go home! said Pip.', pic: '🏠🌟' },
-  ], q: { text: 'Who waved at Pip?', opts: ['🫏', '🐋', '🐍'], a: 0 } },
+  ], qs: [
+    { k: 'lit', text: 'Who waved at Pip?', opts: ['🫏', '🐋', '🐍'], a: 0 },
+    { k: 'think', text: 'Where will Pip go next?', opts: ['🏠', '🌙', '🚌'], a: 0 },
+  ] },
 };
+
+// Big books for children who have finished every world. They use only sounds and heart words
+// taught by the end of World 7, and are opened one at a time (each after the one before it is read).
+// tools/build_content.mjs checks them exactly like the lesson stories.
+export const BOOKS = {
+  hiccup: { title: 'The Hiccup Frog', cover: '🐸', pages: [
+    { t: 'Frog sat on a log.', pic: '🐸🪵' },
+    { t: 'Frog has the hiccups. Hiccup! Hiccup!', pic: '🐸😳' },
+    { t: 'Duck said, Take a big sip! Glug, glug, glug! Hiccup!', pic: '🦆🥤' },
+    { t: 'Pig hid in a box. Boo! said Pig. Hiccup!', pic: '🐷📦' },
+    { t: 'Hen said, Jump and spin! Frog did a jump and a spin. Hiccup!', pic: '🐔🌀' },
+    { t: 'Then Rat sat in a pan and sang a silly song.', pic: '🐀🍳🎵' },
+    { t: 'Frog saw Rat in the pan. Ha, ha, ha!', pic: '🐸😂' },
+    { t: 'No hiccups! They went away!', pic: '🐸🎉' },
+    { t: 'Thank you, silly Rat! said Frog.', pic: '🐀💖' },
+  ], qs: [
+    { k: 'lit', text: 'What did Frog have?', opts: ['hiccups', 'a hat', 'a bug'], a: 0 },
+    { k: 'lit', text: 'Who sat in a pan?', opts: ['🐀', '🐷', '🦆'], a: 0 },
+    { k: 'think', text: 'Why did the hiccups go away?', opts: ['😂', '😴', '😢'], a: 0 },
+  ] },
+  mudbath: { title: 'Max and the Mud', cover: '🐶', pages: [
+    { t: 'Max is a dog. Max likes mud.', pic: '🐶🟫' },
+    { t: 'Max digs in the mud. Dig, dig, dig!', pic: '🐶⛏️' },
+    { t: 'Max sits in the mud. Splish, splash!', pic: '🐶💦' },
+    { t: 'Mum sees Max. Yuck! You are a mud dog! said Mum.', pic: '👩😲' },
+    { t: 'Max has a bath. Max is not glad.', pic: '🛁🐶' },
+    { t: 'Max jumps out. Drip, drip, drip!', pic: '🐶💧' },
+    { t: 'Max shakes and shakes. Splash! Mum is wet!', pic: '🐶💦👩' },
+    { t: 'Mum and Max are clean. Mum and Max grin.', pic: '👩🐶😊' },
+    { t: 'Then Max sees the mud. Max runs to the mud. Dig, dig, dig!', pic: '🐶🟫' },
+  ], qs: [
+    { k: 'lit', text: 'What did Max like?', opts: ['🟫', '🛁', '🍖'], a: 0 },
+    { k: 'lit', text: 'Who got wet when Max shook?', opts: ['Mum', 'Dad', 'Pip'], a: 0 },
+    { k: 'think', text: 'What will Max do next?', opts: ['🟫', '🛁', '🛌'], a: 0 },
+  ] },
+  snailrace: { title: 'Rabbit and Snail', cover: '🐌', pages: [
+    { t: 'Rabbit is fast. Snail is not.', pic: '🐇🐌' },
+    { t: 'Run up the hill to the tree! said Rabbit. I can win!', pic: '⛰️🌳' },
+    { t: 'Get set, go! Zoom! Rabbit runs and runs.', pic: '🐇💨' },
+    { t: 'Snail went up, up, up. Rabbit is far, far up.', pic: '🐌⬆️' },
+    { t: 'Rabbit sat down in the sun. I can nap, said Rabbit.', pic: '🐇☀️😴' },
+    { t: 'Rabbit naps and naps. Snail did not stop.', pic: '🐇💤🐌' },
+    { t: 'Rabbit woke up. Where is Snail?', pic: '🐇❓' },
+    { t: 'Snail sat at the top, by the tree. Snail got there first!', pic: '🐌🌳🏆' },
+    { t: 'You win, Snail! said Rabbit. Rabbit felt sad, but Rabbit had a big grin.', pic: '🐇🐌😊' },
+  ], qs: [
+    { k: 'lit', text: 'Who won?', opts: ['🐌', '🐇', '🐢'], a: 0 },
+    { k: 'lit', text: 'What did Rabbit do in the sun?', opts: ['😴', '🏃', '🍽️'], a: 0 },
+    { k: 'think', text: 'Why did Snail win?', opts: ['Rabbit had a nap', 'Snail ran fast', 'Rabbit got a pie'], a: 0 },
+  ] },
+  wishfish: { title: 'The Wish Fish', cover: '🐠', pages: [
+    { t: 'Pip got a fish on a rod.', pic: '🎣🐟' },
+    { t: 'Let me go! said the fish. I will make a wish for you.', pic: '🐟✨' },
+    { t: 'I wish for a hat, said Pip. Swish! A big, big hat!', pic: '🎩' },
+    { t: 'The hat sat on Pip. Pip is in the hat!', pic: '🎩🐾' },
+    { t: 'I wish for a bike, said Pip. Swish! It is a little bike.', pic: '🚲' },
+    { t: 'I wish for a cake, said Pip. Swish! Splat! A big cake fell on Pip!', pic: '🎂💥' },
+    { t: 'Pip is a mess. Yum, said Pip!', pic: '😋🎂' },
+    { t: 'I wish you could go back in the sea, said Pip. Swish! The fish went back to the sea.', pic: '🐟🌊' },
+    { t: 'Pip sat on the jetty with a hat, a bike and a big cake. What a day!', pic: '🎩🚲🎂' },
+  ], qs: [
+    { k: 'lit', text: 'What fell on Pip?', opts: ['🎂', '🎩', '🚲'], a: 0 },
+    { k: 'lit', text: 'Who said, Let me go?', opts: ['fish', 'pig', 'dog'], a: 0 },
+    { k: 'think', text: 'How did Pip feel at the end?', opts: ['😄', '😢', '😠'], a: 0 },
+  ] },
+  bigbox: { title: 'Sam and the Big Box', cover: '📦', pages: [
+    { t: 'Dad got Sam a gift. It was in a big box.', pic: '🎁📦' },
+    { t: 'Sam got the gift out. It is a little car.', pic: '🚗' },
+    { t: 'Sam sees the box. What can the box be?', pic: '📦❓' },
+    { t: 'Sam sat in the box. It is a boat! Splash, splash!', pic: '📦⛵' },
+    { t: 'Then the box is a rocket. Three, two, one, zoom!', pic: '📦🚀' },
+    { t: 'Then the box is a car. Beep, beep! Sam can drive.', pic: '📦🚗' },
+    { t: 'Then the box is a home for the cat. The cat naps in the box.', pic: '🐱📦' },
+    { t: 'Do you like the car? said Dad. Yes, said Sam, but I like the box best!', pic: '👨👦📦' },
+  ], qs: [
+    { k: 'lit', text: 'What did Dad get for Sam?', opts: ['🎁', '🚲', '🍰'], a: 0 },
+    { k: 'lit', text: 'Who naps in the box?', opts: ['🐱', '🐶', '🐷'], a: 0 },
+    { k: 'think', text: 'Why did Sam like the box best?', opts: ['⛵🚀🚗', '🍰🍪', '🐟🐠'], a: 0 },
+  ] },
+  nightlight: { title: 'A Light in the Night', cover: '🌃', pages: [
+    { t: 'It is night. Pip is in bed, but Pip can not sleep.', pic: '🌃🛏️' },
+    { t: 'Tap, tap, tap! What is it? said Pip.', pic: '❓' },
+    { t: 'Pip got up. A light! A light in the dark!', pic: '💡' },
+    { t: 'Pip went out in the dark. The light went up and down.', pic: '🌃💡' },
+    { t: 'It is a little bug with a light on its tail.', pic: '🐛💡' },
+    { t: 'Help me, said the bug. I am lost.', pic: '🐛😢' },
+    { t: 'Come in, said Pip. Sit on my bed.', pic: '🛏️🐛' },
+    { t: 'The bug sat by Pip. Its light is like a little star.', pic: '⭐🐛' },
+    { t: 'Pip and the bug went to sleep. Night, night!', pic: '😴🐛' },
+  ], qs: [
+    { k: 'lit', text: 'Who was lost?', opts: ['🐛', '🐶', '🐷'], a: 0 },
+    { k: 'lit', text: 'What did the bug have on its tail?', opts: ['💡', '🔑', '🎈'], a: 0 },
+    { k: 'think', text: 'How did the bug feel at the start?', opts: ['😢', '😄', '😴'], a: 0 },
+  ] },
+  tooth: { title: 'Tim and the Wobbly Tooth', cover: '🦷', pages: [
+    { t: 'Tim has a wobbly tooth.', pic: '🦷' },
+    { t: 'Tim felt the tooth with his hand. It is up and down.', pic: '🦷↕️' },
+    { t: 'I can get it out, said Dad. No, Dad! said Tim.', pic: '👨🙅' },
+    { t: 'Mum said, Eat some toast. Tim bit the toast. Crunch!', pic: '🍞😬' },
+    { t: 'The tooth is not out. It is still a wobbly tooth.', pic: '🦷❓' },
+    { t: 'In the night, Tim had a big yawn. Pop! Out came the tooth!', pic: '🌙🥱🦷' },
+    { t: 'Tim sat the tooth in a cup by his bed.', pic: '🦷☕🛏️' },
+    { t: 'In the morning, a coin sat in the cup!', pic: '🪙☕' },
+    { t: 'Tim has a gap. Tim grins and grins.', pic: '😁' },
+  ], qs: [
+    { k: 'lit', text: 'What was wobbly?', opts: ['🦷', '🧦', '🐟'], a: 0 },
+    { k: 'lit', text: 'What did Tim get in the cup?', opts: ['🪙', '🦷', '🍞'], a: 0 },
+    { k: 'think', text: 'How did Tim feel at the end?', opts: ['😁', '😢', '😠'], a: 0 },
+  ] },
+  whalesong: { title: 'Big Whale, Big Song', cover: '🐋', pages: [
+    { t: 'Whale had a big, big song to sing.', pic: '🐋🎵' },
+    { t: 'Whale had a big, big gulp.', pic: '🐋🌊' },
+    { t: 'Whale sang. Burp! Out came a big, big burp.', pic: '🐋💨' },
+    { t: 'The fish had a fright and shot up in the sky.', pic: '🐟😱☁️' },
+    { t: 'Oops! said Whale. Let me sing the song.', pic: '🐋🙈' },
+    { t: 'Whale had a gulp. Whale sang. Burp! Burp! Burp!', pic: '🐋💨💨' },
+    { t: 'Dolphin said, Do not gulp. Sing with a big smile.', pic: '🐬😊' },
+    { t: 'Whale sang a long, sweet song. All the fish sat still.', pic: '🐋🎶🐟' },
+    { t: 'Then Whale had a little burp. Ha, ha, ha! said all the fish.', pic: '🐟😂' },
+  ], qs: [
+    { k: 'lit', text: 'What came out when Whale sang?', opts: ['burp', 'hat', 'cat'], a: 0 },
+    { k: 'lit', text: 'Who said, Sing with a big smile?', opts: ['🐬', '🐟', '🐙'], a: 0 },
+    { k: 'think', text: 'Why did the fish sit still at the end?', opts: ['🎶', '🌧️', '🐙'], a: 0 },
+  ] },
+};
+export const storyOf = id => STORIES[id] || BOOKS[id];
+// Audio id of question i of a story or book (the first keeps the id it always had).
+export const qid = (id, i) => i ? `q_${id}_${i}` : `q_${id}`;
 
 // Wordlings: one hatches per lesson. Names are decodable by the time they hatch.
 export const WORDLINGS = {
@@ -623,6 +863,7 @@ export const LINES = {
   egg_hatch: 'Your egg is hatching! Tap it, tap it!',
   egg_meet: 'Meet your new Wordling!',
   lesson_done: 'Lesson complete!',
+  world_done: 'World complete! Bonus game!',
   rest: 'Super reading today! Pip is getting sleepy. Let’s play again tomorrow!',
   arcade_go: 'Ready, set, go!',
   arcade_done: 'Time’s up! Great playing!',
@@ -655,7 +896,16 @@ export const LINES = {
   sort_go: 'Which spelling is in this word?',
   chop_go: 'Long words have parts. Tap where to chop the word!',
   chop_read: 'Now read the parts, then the whole word!',
-  the_end: 'You finished every world in Wordwild! You are a super reader!',
+  trace_go: 'Now trace it with your finger. Start at the dot!',
+  trace_again: 'Have another go. Start at the dot!',
+  trace_watch: 'Watch me. I will show you!',
+  trace_next: 'Now the next letter!',
+  the_end: 'You finished every world in Wordwild! You are a super reader! Now you can do daily practice, and read the big books!',
+  practice_go: 'Daily practice! Let’s read and play!',
+  practice_done: 'Great practice! Here is your reward!',
+  end_next: 'Tap the star for daily practice. Tap the books to read a big book!',
+  book_locked: 'Read the book before this one to open it!',
+  bigbooks: 'Big books! Pick one to read.',
   who: 'Who’s playing? Ask a grown-up to type your name.',
   pin_new: 'Make a secret code. Pick four numbers you will remember.',
   pin_again: 'Type it one more time.',
@@ -670,6 +920,25 @@ export const LINES = {
   oops4: 'Not quite. Try again!',
 };
 
+// The bonus game after each world (milestone.js): world 1 Chick Run, 2 Feed the Chicks, 3 Hide and Seek, and round again.
+export const BONUS_KINDS = ['run', 'feed', 'hide', 'run', 'feed', 'hide', 'run'];
+export const BONUS_INFO = {
+  run: { icon: '🐥', title: 'Chick Run' },
+  feed: { icon: '🌽', title: 'Feed the Chicks' },
+  hide: { icon: '🏚️', title: 'Hide and Seek' },
+};
+
+// Lines for the bonus games (milestone.js); ids are used as they are (ms_*), voiced by the narrator.
+export const MS_LINES = {
+  ms_find: 'Find',
+  ms_run_go: 'Run, little chick! Peck the corn!',
+  ms_feed_go: 'The chicks are hungry! Feed them the right picture!',
+  ms_hide_go: 'The chicks are hiding! Can you find them?',
+  ms_found_all: 'You found them all! Dance party!',
+  ms_surprise: 'Ha ha! A surprise!',
+  ms_done: 'Great job, everyone!',
+};
+
 export const PIP_LINES = {
   hi: 'Hi! I’m Pip! Let’s read words and find Wordlings together!',
   try: 'Ooh, can I read it? I think it says',
@@ -679,6 +948,9 @@ export const PIP_LINES = {
   sleepy: 'Yawn! I’m sleepy. See you tomorrow!',
   wow: 'Woohoo!',
   egg: 'An egg! What’s inside?',
+  ra_go: 'Read it to me! Tap the microphone.',
+  ra_you: 'Listen to you!',
+  ra_me: 'Now it’s my turn!',
 };
 
 // How the sound is said: held ("mmm") or short and crisp ("t"), never with an added "uh".

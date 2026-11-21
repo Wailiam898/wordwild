@@ -9,7 +9,7 @@ let speechToken = 0;
 let activeSources = [];
 let musicOn = true;
 let musicTimer = null;
-let theme = 'sands';
+let theme = 'farm';
 
 export function audioReady() { return !!ctx; }
 
@@ -59,13 +59,23 @@ export async function preload(ids) {
   await Promise.all(Array.from({ length: 6 }, worker));
 }
 
+// How long the voice has been playing in total (ms). Reading-speed timing subtracts this,
+// so the time a child spends listening is never counted as time spent reading.
+let voicePlaying = 0, voiceSince = 0, voiceTotal = 0;
+export function voiceBusyMs() { return voiceTotal + (voicePlaying > 0 ? performance.now() - voiceSince : 0); }
+
 function playBuffer(buf, rate = 1) {
   return new Promise(res => {
     const s = ctx.createBufferSource();
     s.buffer = buf; s.playbackRate.value = rate;
     s.connect(voiceBus);
     let done = false;
-    const end = () => { if (done) return; done = true; activeSources = activeSources.filter(x => x !== s); res(); };
+    if (voicePlaying++ === 0) voiceSince = performance.now();
+    const end = () => {
+      if (done) return; done = true;
+      if (--voicePlaying === 0) voiceTotal += performance.now() - voiceSince;
+      activeSources = activeSources.filter(x => x !== s); res();
+    };
     s.onended = end;
     // If the audio context is interrupted (e.g. iOS call/lock), never leave the game waiting.
     setTimeout(end, buf.duration / rate * 1000 + 400);
@@ -112,6 +122,33 @@ export async function tap(id) {
   }
 }
 
+// Play a clip the child just recorded (a Blob held in memory) through the voice channel.
+// Resolves true if it played. The decoded copy is dropped as soon as it has finished.
+export async function playBlob(blob) {
+  if (!ctx || !blob) return false;
+  stopSpeech();
+  const token = speechToken;
+  duck(true);
+  let buf = null;
+  try {
+    const ab = await blob.arrayBuffer();
+    buf = await new Promise((res, rej) => {
+      const t = setTimeout(() => rej(new Error('decode timeout')), 5000);
+      ctx.decodeAudioData(ab, b => { clearTimeout(t); res(b); }, e => { clearTimeout(t); rej(e || new Error('decode')); });
+    });
+  } catch (e) { buf = null; }
+  let played = false;
+  if (buf && token === speechToken) { await playBuffer(buf); played = true; }
+  buf = null;
+  if (token === speechToken) duck(false);
+  return played;
+}
+
+// iOS: record and play through the speaker. 'play-and-record' while the microphone is open, 'playback' otherwise.
+export function setSession(type) {
+  try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (e) {}
+}
+
 export function clipDuration(id) {
   const b = buffers.get(id);
   return b ? b.duration : 0;
@@ -154,7 +191,7 @@ const SFX = {
   bad(t) { tone(330, t, 0.16, 'triangle', 0.16); tone(247, t + 0.13, 0.22, 'triangle', 0.14); },
   coin(t) { tone(988, t, 0.08, 'square', 0.08); tone(1319, t + 0.07, 0.3, 'square', 0.08); },
   whoosh(t) { noise(t, 0.45, 0.25, 400, 3000, 0.8); },
-  launch(t) { noise(t, 1.2, 0.3, 200, 4000, 0.6); tone(120, t, 1.1, 'sawtooth', 0.06, sfxBus, 900); },
+  flap(t) { [0, 0.09, 0.18, 0.27].forEach(d => noise(t + d, 0.08, 0.12, 900, 2200, 0.8)); tone(660, t, 0.12, 'sine', 0.1, sfxBus, 990); tone(880, t + 0.2, 0.2, 'sine', 0.1, sfxBus, 1200); },
   sparkle(t) { [1568, 2093, 2637, 3136, 2637, 3520].forEach((f, i) => tone(f, t + i * 0.05, 0.25, 'sine', 0.1)); },
   crack(t) { noise(t, 0.12, 0.4, 2500, 800, 2); tone(180, t, 0.08, 'square', 0.05); },
   fanfare(t) { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, t + i * 0.11, i === 5 ? 0.6 : 0.18, 'triangle', 0.2)); },
@@ -168,13 +205,13 @@ export function sfx(name) {
 
 // ---------- Music ----------
 const SCALES = {
-  sands:   { root: 60, bpm: 104, prog: [0, 5, 7, 5] },
-  jungle:  { root: 57, bpm: 112, prog: [0, 3, 5, 7] },
-  volcano: { root: 55, bpm: 100, prog: [0, 5, 3, 7] },
-  caves:   { root: 62, bpm: 92,  prog: [0, 7, 5, 3] },
-  clouds:  { root: 65, bpm: 96,  prog: [0, 5, 7, 3] },
-  reef:    { root: 58, bpm: 108, prog: [0, 3, 7, 5] },
-  space:   { root: 63, bpm: 88,  prog: [0, 7, 3, 5] },
+  farm:    { root: 60, bpm: 104, prog: [0, 5, 7, 5] },
+  meadow:  { root: 57, bpm: 112, prog: [0, 3, 5, 7] },
+  pond:    { root: 55, bpm: 100, prog: [0, 5, 3, 7] },
+  loft:    { root: 62, bpm: 92,  prog: [0, 7, 5, 3] },
+  coop:    { root: 65, bpm: 96,  prog: [0, 5, 7, 3] },
+  shore:   { root: 58, bpm: 108, prog: [0, 3, 7, 5] },
+  roost:   { root: 63, bpm: 88,  prog: [0, 7, 3, 5] },
   title:   { root: 60, bpm: 100, prog: [0, 5, 3, 7] },
 };
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16];
@@ -185,7 +222,7 @@ function marimba(freq, t, vol) {
   tone(freq * 4, t, 0.08, 'sine', vol * 0.25, musicBus);
 }
 
-export function setTheme(name) { theme = SCALES[name] ? name : 'sands'; }
+export function setTheme(name) { theme = SCALES[name] ? name : 'farm'; }
 
 export function setMusic(on) {
   musicOn = on;

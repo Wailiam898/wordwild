@@ -1,11 +1,14 @@
 // The activities. Each takes a game context G and resolves with { right, total }.
 // G = { stage, setReplay(fn), known: {g,h}, pool: [{w,e,seg}], gem(el,n), first(key) }
-import { GRAPHEMES, HEART, STORIES, STRETCHY, BOUNCY, NAMES, SILENT_E, isSplit, label, tileText, sentenceWords, splitSyllables } from './data.js';
+import { GRAPHEMES, HEART, storyOf, qid, STRETCHY, BOUNCY, NAMES, SILENT_E, isSplit, label, tileText, sentenceWords, splitSyllables } from './data.js';
 import { VARIANTS } from './variants.js';
 import { say, tap, sfx, clipDuration, load } from './audio.js';
-import { h, onTap, sleep, shuffle, pick, anim, praise, oops, burstAt, confetti } from './ui.js';
-import { pipSVG, rocketSVG } from './art.js';
+import { h, onTap, sleep, shuffle, pick, anim, praise, oops, burstAt, confetti, calm } from './ui.js';
+import { pipSVG, stoneSVG } from './art.js';
 import * as store from './store.js';
+import * as trace from './trace.js';
+import * as readaloud from './readaloud.js';
+import * as fluency from './fluency.js';
 
 const P = g => g === SILENT_E ? null : 'p_' + g;
 const W = w => 'w_' + w;
@@ -104,7 +107,13 @@ export async function meet(G, g) {
     row.append(t);
   });
   await ask();
-  return finished;
+  const result = await finished;
+  // Then draw the letter(s). Not counted in the score; skipped once it has been traced three times.
+  if (store.tracedCount(g) < 3) {
+    await sleep(300);
+    await trace.run(G, g);
+  }
+  return result;
 }
 
 // ---------------------------------------------------------------- Bubble pop
@@ -202,9 +211,9 @@ export function soundPop(G, targets, opts = {}) {
     }
     for (const b of bubbles) {
       if (b.popped) continue;
-      b.y -= b.sp * dt;
+      b.y -= b.sp * dt * (calm() ? 0.6 : 1);   // reduced motion: bubbles drift up more slowly
       b.wob += dt * 2;
-      b.el.style.transform = `translate(${b.x + Math.sin(b.wob) * 12}px, ${b.y}px)`;
+      b.el.style.transform = `translate(${b.x + Math.sin(b.wob) * (calm() ? 3 : 12)}px, ${b.y}px)`;
       if (b.y < -b.size - 10) { b.popped = true; b.el.remove(); }
     }
     for (let i = bubbles.length - 1; i >= 0; i--) if (bubbles[i].popped && !bubbles[i].el.isConnected) bubbles.splice(i, 1);
@@ -232,21 +241,34 @@ export function soundPop(G, targets, opts = {}) {
   return done;
 }
 
-// ---------------------------------------------------------------- Blast blend
-export async function blast(G, item, intro) {
+// ---------------------------------------------------------------- Hop blend
+// Pip hops along one stepping stone for each sound the child taps, then (after the slide to blend and the right
+// picture) flaps over to the picture. Same steps as always: tap each sound, slide to blend, pick the picture.
+export async function hop(G, item, intro) {
   const st = G.stage;
   st.innerHTML = '';
   const seg = item.seg;
-  const rocket = h('div', { class: 'rocket', html: rocketSVG() });
+  const chick = h('div', { class: 'hop-chick', html: pipSVG('happy', G.hat || '') });
+  const stones = seg.map((_, k) => h('div', { class: 'hop-stone', html: stoneSVG(k) }));
+  const scene = h('div', { class: 'hop-scene' }, h('div', { class: 'hop-grass' }), ...stones, chick);
+  // Where the chick stands: on the grass at the start, then on each stone in turn.
+  const standAt = i => {
+    const sc = scene.getBoundingClientRect();
+    const el = i < 0 ? scene.firstChild : stones[i];
+    const r = el.getBoundingClientRect();
+    chick.style.left = (r.left + r.width / 2 - sc.left) + 'px';
+  };
   const tiles = seg.map(g => tileEl(g, 'blend-tile pop-in'));
   const row = h('div', { class: 'tile-row' }, tiles);
-  const knob = h('div', { class: 'knob' }, '⭐');
+  const knob = h('div', { class: 'knob' }, '🐥');
   const track = h('div', { class: 'track' }, h('div', { class: 'track-fill' }), h('div', { class: 'track-arrow' }), knob);
   const choices = h('div', { class: 'choice-row pics' });
-  st.append(h('div', { class: 'blast' }, rocket, h('div', { class: 'blend-box' }, row, track), choices));
+  st.append(h('div', { class: 'hop' }, scene, h('div', { class: 'blend-box' }, row, track), choices));
   let next = 0;
+  requestAnimationFrame(() => { chick.classList.add('placed'); standAt(-1); });
   tiles[0].classList.add('next');
   G.setReplay(() => say('n_blend_tap'));
+  const timer = fluency.startTimer();   // grown-ups' reading speed: word shown -> right picture (voice and hidden time not counted)
 
   const charged = new Promise(resolve => {
     tiles.forEach((t, i) => onTap(t, () => {
@@ -254,6 +276,7 @@ export async function blast(G, item, intro) {
       anim(t, 'boing', 400);
       if (i === next) {
         t.classList.add('lit'); t.classList.remove('next');
+        standAt(i); chick.classList.remove('hopping'); void chick.offsetWidth; chick.classList.add('hopping');
         next++;
         if (next < tiles.length) tiles[next].classList.add('next');
         else resolve();
@@ -312,11 +335,17 @@ export async function blast(G, item, intro) {
           choices.querySelectorAll('.pic-card').forEach(x => x.classList.add('locked'));
           c.classList.add('right');
           store.record('w:' + item.w, tries === 0);
+          if (tries === 0) fluency.save(timer, item.w);
           G.gem(c, tries === 0 ? 2 : 1);
           await say(W(item.w));
-          rocket.classList.add('launch'); sfx('launch');
-          burstAt(rocket, 30);
+          // Pip flaps over to the picture.
+          const cr = chick.getBoundingClientRect(), pr = c.getBoundingClientRect();
+          chick.style.translate = `${pr.left + pr.width / 2 - (cr.left + cr.width / 2)}px ${pr.top + pr.height * 0.2 - (cr.top + cr.height / 2)}px`;
+          chick.classList.remove('hopping'); chick.classList.add('fly'); sfx('flap');
+          burstAt(c, 30);
           await praise();
+          // Optional: read the word to Pip (grown-ups switch; first hop word of a lesson only).
+          if (intro) await readaloud.readToPip(G, { kind: 'word', tokens: [item.w], model: () => say(W(item.w)) });
           resolve({ right: tries === 0 ? 1 : 0, total: 1 });
         } else {
           tries++;
@@ -588,6 +617,7 @@ export async function speedRead(G, items, opts = {}) {
     st.append(h('div', { class: 'speed' }, arcade ? h('div', { class: 'pop-hud' }, timerEl, scoreEl) : null, word, row));
     G.setReplay(async () => { for (const g of item.seg) { await tap(P(g)); await sleep(120); } });
     let tries = 0;
+    const timer = fluency.startTimer();   // not kept in the timed arcade game, where the child is hurrying
     await new Promise(resolve => {
       pictureChoices(item, G.pool, store.level() === 0 ? 2 : 3).forEach(o => {
         const c = h('div', { class: 'pic-card pop-in' }, h('span', { class: 'emoji' }, o.e));
@@ -598,6 +628,7 @@ export async function speedRead(G, items, opts = {}) {
             row.querySelectorAll('.pic-card').forEach(x => x.classList.add('locked'));
             c.classList.add('right'); burstAt(c, 16); sfx('good');
             store.record('w:' + item.w, tries === 0);
+            if (!arcade && tries === 0) fluency.save(timer, item.w);
             total++; if (!tries) { right++; score += 10; }
             if (arcade) { scoreEl.textContent = score; anim(scoreEl, 'bump', 300); }
             G.gem(c, 1);
@@ -617,12 +648,21 @@ export async function speedRead(G, items, opts = {}) {
   return { right, total, score };
 }
 
+// A little shower of sparkles and "+1" when a page was read aloud.
+function sparkle(st) {
+  const el = h('div', { class: 'ra-reward' }, '✨ +1 💎 ✨');
+  st.append(el);
+  setTimeout(() => el.remove(), 2200);
+  burstAt(el, 30);
+}
+
 // ---------------------------------------------------------------- Story
+// A lesson story or a big book: read the pages, then answer its 2 or 3 questions.
+// Each question is spoken; the answers are pictures or short words. Right first time is saved for the grown-ups.
 export async function story(G, id, opts = {}) {
-  const S = STORIES[id];
+  const S = storyOf(id);
   const st = G.stage;
-  let right = 0, total = 0;
-  const ids = [`st_${id}`, `q_${id}`, ...S.pages.map((_, i) => `s_${id}_${i}`)];
+  const ids = [`st_${id}`, ...S.qs.map((_, i) => qid(id, i)), ...S.pages.map((_, i) => `s_${id}_${i}`)];
   ids.forEach(load);
 
   // Cover
@@ -639,74 +679,120 @@ export async function story(G, id, opts = {}) {
   for (let p = 0; p < S.pages.length; p++) {
     const page = S.pages[p];
     st.innerHTML = '';
-    const words = page.t.split(' ').map(tok => {
+    // The child taps every word, left to right. Only then does the sentence play and the next button open.
+    const toks = page.t.split(' ');
+    let ptr = 0;                       // index of the next word to tap
+    let finished;                      // called when the last word has been tapped
+    const allTapped$ = new Promise(r => (finished = r));
+    const isWord = tok => /[a-z]/i.test(tok);
+    const words = toks.map((tok, i) => {
       const clean = tok.toLowerCase().replace(/[^a-z’']/g, '').replace(/[’']/g, '');
-      const el = h('span', { class: 'sw' }, tok);
-      onTap(el, () => { anim(el, 'boing', 400); if (clean) say(W(clean)); });
+      const el = h('span', { class: 'sw' + (isWord(tok) ? '' : ' done'), 'data-i': i }, tok);
+      onTap(el, () => {
+        if (!isWord(tok)) return;
+        anim(el, 'boing', 400);
+        if (clean) say(W(clean));      // a word with no clip still counts below
+        if (i !== ptr) return;         // out of order (or already tapped): it only says the word
+        el.classList.add('done'); el.classList.remove('next');
+        ptr++;
+        while (ptr < toks.length && !isWord(toks[ptr])) ptr++;
+        if (ptr < toks.length) words[ptr].classList.add('next'); else finished();
+      });
       return el;
     });
-    const text = h('div', { class: 'story-text' });
+    while (ptr < toks.length && !isWord(toks[ptr])) ptr++;
+    if (words[ptr]) words[ptr].classList.add('next'); else finished();   // (a page with no words at all never blocks)
+    const text = h('div', { class: 'story-text' + (page.t.length > 60 ? ' long' : page.t.length > 28 ? ' mid' : '') });
     words.forEach((w, i) => { text.append(w); if (i < words.length - 1) text.append(' '); });
     const scene = h('div', { class: 'scene pop-in' }, h('div', { class: 'scene-pic' }, page.pic),
-      /pip/i.test(page.t) ? h('div', { class: 'scene-pip', html: pipSVG(p % 2 ? 'wow' : 'happy', opts.hat || '') }) : null);
-    const speaker = h('button', { class: 'btn round speaker' }, '🔊');
-    const next = h('button', { class: 'btn big go' }, '▶');
+      /pip/i.test(page.t) ? h('div', { class: 'scene-pip', html: pipSVG(p % 2 ? 'wow' : 'happy', opts.hat || '') }) : null);
+    const speaker = h('button', { class: 'btn round speaker', 'aria-label': 'Hear it' }, '🔊');
+    const next = h('button', { class: 'btn big go locked', disabled: '', 'aria-label': 'Next page' }, '▶');
     const dots = h('div', { class: 'page-dots' }, S.pages.map((_, i) => h('i', { class: i === p ? 'on' : i < p ? 'done' : '' })));
-    st.append(h('div', { class: 'story' }, dots, scene, text, h('div', { class: 'story-btns' }, speaker, next)));
+    st.append(h('div', { class: 'story' + (page.t.length > 60 ? ' long' : page.t.length > 28 ? ' mid' : '') }, dots, scene, text, h('div', { class: 'story-btns' }, speaker, next)));
+    const allTapped = () => ptr >= toks.length;
     const readAloud = async () => {
       const sid = `s_${id}_${p}`;
       await load(sid);
       const dur = clipDuration(sid) * 1000;
-      const lens = words.map(w => w.textContent.length + 2);
+      const spans = words.filter((w, i) => isWord(toks[i]));
+      const lens = spans.map(w => w.textContent.length + 2);
       const sum = lens.reduce((a, b) => a + b, 0);
       let t = 0;
-      const timers = words.map((w, i) => {
+      const timers = spans.map((w, i) => {
         const at = t; t += dur * lens[i] / sum;
-        return setTimeout(() => { words.forEach(x => x.classList.remove('hl')); w.classList.add('hl'); }, at);
+        return setTimeout(() => { spans.forEach(x => x.classList.remove('hl')); w.classList.add('hl'); }, at);
       });
       await say(sid);
       timers.forEach(clearTimeout);
-      words.forEach(x => x.classList.remove('hl'));
+      spans.forEach(x => x.classList.remove('hl'));
     };
-    G.setReplay(readAloud);
-    onTap(speaker, readAloud);
-    await new Promise(r => onTap(next, r));
+    // Before every word is tapped the sound buttons only help with the next word; the whole sentence waits.
+    const hint = () => { const w = words[ptr]; if (w) { anim(w, 'boing', 400); say(W(toks[ptr].toLowerCase().replace(/[^a-z’']/g, '').replace(/[’']/g, ''))); } };
+    const sound = () => (allTapped() ? readAloud() : hint());
+    G.setReplay(sound);
+    onTap(speaker, sound);
+    const goP = new Promise(r => onTap(next, () => { if (!next.disabled) r(); }));
+    await allTapped$;
+    await Promise.race([readAloud(), sleep(15000)]);   // the whole sentence, now that every word is tapped
+    next.disabled = false; next.classList.remove('locked');
+    // "Read it to Pip", if a grown-up switched it on: once per page, never required.
+    if (readaloud.enabled()) {
+      const ro = { kind: 'sentence', perPage: true, tokens: toks, model: spans => readSentence(`s_${id}_${p}`, spans) };
+      await readaloud.readToPip(G, ro);
+      if (ro.recorded) {
+        store.recordReadAloud();
+        G.gem(next, 1);
+        sparkle(st);
+        praise();
+      }
+    }
+    await goP;
     sfx('whoosh');
   }
 
-  // Question
-  st.innerHTML = '';
-  const row = h('div', { class: 'choice-row pics' });
-  st.append(h('div', { class: 'center-col' }, h('div', { class: 'big-ear', html: '❓' }), row));
-  const ask = () => say(`q_${id}`);
-  G.setReplay(ask);
-  let tries = 0;
-  await new Promise(resolve => {
-    S.q.opts.forEach((e, i) => {
-      const c = h('div', { class: 'pic-card pop-in' }, h('span', { class: 'emoji' }, e));
-      if (i === S.q.a) c.dataset.ok = 1;
-      onTap(c, async () => {
-        if (c.classList.contains('locked')) return;
-        if (i === S.q.a) {
-          row.querySelectorAll('.pic-card').forEach(x => x.classList.add('locked'));
-          c.classList.add('right'); burstAt(c, 30); G.gem(c, 3);
-          total++; if (!tries) right++;
-          await praise();
-          resolve();
-        } else {
-          tries++; c.classList.add('wrong', 'locked'); anim(c, 'shake');
-          await oops([`q_${id}`]);
-        }
+  // Questions, one at a time
+  let firsts = 0;
+  for (let qi = 0; qi < S.qs.length; qi++) {
+    const Q = S.qs[qi];
+    const wordAnswers = Q.opts.some(o => /[A-Za-z]/.test(o));
+    st.innerHTML = '';
+    const row = h('div', { class: 'choice-row ' + (wordAnswers ? 'q-words' : 'pics') });
+    st.append(h('div', { class: 'center-col' }, h('div', { class: 'big-ear', html: '❓' }), row));
+    const ask = () => say(qid(id, qi));
+    G.setReplay(ask);
+    let tries = 0;
+    await new Promise(resolve => {
+      shuffle(Q.opts.map((o, i) => ({ o, i }))).forEach(({ o, i }) => {
+        const c = wordAnswers ? h('div', { class: 'word-choice pop-in' }, o) : h('div', { class: 'pic-card pop-in' }, h('span', { class: 'emoji' }, o));
+        if (i === Q.a) c.dataset.ok = 1;
+        onTap(c, async () => {
+          if (c.classList.contains('locked')) return;
+          if (i === Q.a) {
+            row.querySelectorAll('.pic-card, .word-choice').forEach(x => x.classList.add('locked'));
+            c.classList.add('right'); burstAt(c, 30); G.gem(c, tries ? 1 : 3);
+            if (!opts.reread) store.recordComprehension(id, Q.k, tries === 0);   // a first reading counts; re-reading from the library does not
+            if (!tries) firsts++;
+            await praise(wordAnswers && !o.includes(' ') ? [W(o.toLowerCase())] : []);
+            resolve();
+          } else {
+            tries++; c.classList.add('wrong', 'locked'); anim(c, 'shake');
+            if (tries >= 2) row.querySelector('[data-ok]')?.classList.add('hint');
+            await oops([qid(id, qi)]);
+          }
+        });
+        row.append(c);
       });
-      row.append(c);
+      ask();
     });
-    ask();
-  });
+    await sleep(250);
+  }
   confetti(90);
   sfx('fanfare');
   store.addBook(id);
   if (!opts.reread) await say('n_story_done');
-  return { right, total };
+  // The questions count as one answer in the lesson's stars, as the single question always did.
+  return { right: firsts / S.qs.length, total: 1 };
 }
 
 // Tapping the silent e: it zaps its vowel, which then says its name.
@@ -819,6 +905,7 @@ export async function sillyOrNot(G, s) {
   const ask = () => say('n_silly_q');
   G.setReplay(ask);
   ask();
+  const timer = fluency.startTimer();   // reading speed: sentence shown -> the right answer
   const ans = await new Promise(r => { onTap(ok, () => r(false)); onTap(silly, () => r(true)); });
   row.classList.add('locked');
   delete (s.silly ? silly : ok).dataset.ok;
@@ -827,6 +914,7 @@ export async function sillyOrNot(G, s) {
   btn.classList.add(right ? 'right' : 'wrong');
   pic.classList.remove('hidden'); anim(pic, 'bounce', 700);
   store.record('s:' + s.id, right);
+  if (right) fluency.save(timer, null, sentenceWords(s.t).length);
   if (right) { sfx('good'); burstAt(btn, 24); G.gem(btn, 2); }
   else await oops();
   await sleep(300);
@@ -1020,7 +1108,7 @@ export async function memory(G, items) {
   const cards = shuffle(items.flatMap(it => [{ it, kind: 'w' }, { it, kind: 'p' }]));
   const grid = h('div', { class: 'mem-grid n' + cards.length });
   st.append(h('div', { class: 'center-col' }, grid));
-  let first = null, busy = false, matched = 0, misses = 0;
+  let first = null, busy = false, matched = 0, misses = 0, timer = null;
   cards.forEach(c => {
     const face = c.kind === 'w' ? h('div', { class: 'mem-face word' }, c.it.w) : h('div', { class: 'mem-face' }, h('span', { class: 'emoji' }, c.it.e));
     c.el = h('div', { class: 'mem-card pop-in' }, h('div', { class: 'mem-back' }, '⭐'), face);
@@ -1037,9 +1125,15 @@ export async function memory(G, items) {
   return new Promise(resolve => cards.forEach(c => onTap(c.el, async () => {
     if (busy || c.el.classList.contains('up')) return;
     c.el.classList.add('up'); sfx('tap');
-    if (!first) { first = c; markNext(); return; }
+    if (!first) {
+      first = c; markNext();
+      timer = c.kind === 'w' ? fluency.startTimer() : null;   // reading speed: a word card turned up -> its picture found
+      return;
+    }
     const a = first; first = null;
     if (a.it === c.it) {
+      if (a.kind === 'w' && timer) fluency.save(timer, a.it.w);
+      timer = null;
       a.el.classList.add('matched'); c.el.classList.add('matched');
       matched++;
       burstAt(c.el, 16); G.gem(c.el, 1);

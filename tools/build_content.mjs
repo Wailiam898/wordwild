@@ -1,9 +1,9 @@
 // Validates the curriculum (decodability), generates Pip's mistake variants,
 // and writes the audio manifest that tools/gen_audio.py renders.
 // Usage: node tools/build_content.mjs
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import {
-  GRAPHEMES, HEART, WORLDS, STORIES, WORDLINGS, LINES, PIP_LINES, SENTENCES, FRAMES,
+  GRAPHEMES, HEART, WORLDS, STORIES, BOOKS, qid, WORDLINGS, LINES, MS_LINES, PIP_LINES, SENTENCES, FRAMES,
   parseWords, parseSentences, sentenceWords, segment, splitSyllables, spell, isSplit, SILENT_E, allLessons, knownAt,
 } from '../app/js/data.js';
 
@@ -19,6 +19,87 @@ function decodable(word, known) {
   // Plural / verb -s on a decodable base.
   if (word.endsWith('s') && segment(word.slice(0, -1), known.g)) return true;
   return false;
+}
+
+
+// ---- Words that look decodable but are not said the way their letters suggest ----
+// segment() only checks that letters can be cut into taught sounds. These words pass that test
+// yet are said differently (of, give, snow, took...), so they must not appear in anything a child reads.
+const TRAPS = new Set(('of put pull push full bull bush give live move done gone none once only other mother brother another so want wash watch '
+  + 'swap wasp swan wand word work world worm war warm very every again head bread dead ready steady heavy weather breath instead spread thread '
+  + 'break great steak look book took good foot wood wool hook cook shook stood brook hood goes does oh hi find kind mind behind tiny sorry '
+  + 'snow grow show low slow know own blow flow glow row bow throw window pillow yellow below follow elbow floor door poor thumb lamb climb comb bomb '
+  + 'young touch enough trouble soup group through thought bought four pour tour son ton month glove above dove shove oven cover nothing won wonder '
+  + 'ball call fall hall tall wall small talk walk chalk key money monkey donkey honey field chief thief brief piece school stomach '
+  + 'gem gems giant gentle giraffe cage page huge age stage ice nice mice rice face race place space dance').split(' '));
+// Returns why a word could be mis-sounded, or '' if fine. `known` = what has been taught.
+function trapReason(w, known) {
+  if (known.h.has(w) || w === 'pip') return '';
+  if (TRAPS.has(w) || TRAPS.has(w.replace(/s$/, ''))) return 'said differently from its letters';
+  const seg = segment(w, known.g) || (w.endsWith('s') ? segment(w.slice(0, -1), known.g) : null);
+  if (!seg) return '';
+  if (seg.length > 1 && seg[seg.length - 1] === 'e') return 'ends in a silent e that has not been taught';
+  const i = seg.findIndex(isSplit);
+  if (i >= 0 && seg[i + 1] === 'r' && seg[i + 2] === SILENT_E) return 'vowel + r + e changes the vowel sound';
+  if (/c[eiy]/.test(w)) return 'soft c';
+  if (/ea(r|d)/.test(w) && !/^(read|lead|bead)/.test(w)) return 'ea before r or d is said differently';
+  if (w.length >= 5 && w.endsWith('ed') && !w.endsWith('eed')) return 'ends in -ed (not taught)';
+  return '';
+}
+
+// ---- Stories and big books ----
+// Sentences on a page. Sounds like "Hic!" or "Dig, dig, dig!" (two words or fewer, or one word repeated) are not counted.
+function sentenceCount(t) {
+  return t.split(/(?<=[.!?])\s+(?=[A-Z])/).filter(c => {
+    const ws = tokens(c);
+    return ws.length > 2 && new Set(ws).size > 1;
+  }).length;
+}
+const isEmojiOpt = o => !/[A-Za-z]/.test(o);
+function checkStory(where, st, known, wi, isBook) {
+  const bad = isBook ? errors : warn;       // lesson stories already in the game only warn about sound-alike traps
+  st.pages.forEach(p => tokens(p.t).forEach(w => {
+    if (w !== 'pip' && !decodable(w, known)) errors.push(`${where}: "${w}" not decodable in "${p.t}"`);
+    else { const r = trapReason(w, known); if (r) bad.push(`${where}: "${w}" ${r} in "${p.t}"`); }
+  }));
+  tokens(st.title).forEach(w => { if (!decodable(w, known)) errors.push(`${where} title: "${w}" not decodable`); });
+  if (!st.cover) errors.push(`${where}: no cover picture`);
+  st.pages.forEach(p => { if (!p.pic) errors.push(`${where}: page has no picture: ${p.t}`); });
+  if (isBook) {
+    if (st.pages.length < 6 || st.pages.length > 10) errors.push(`${where}: a big book needs 6 to 10 pages, has ${st.pages.length}`);
+    st.pages.forEach(p => {
+      const n = sentenceCount(p.t);
+      if (n < 1 || n > 2) errors.push(`${where}: a page needs 1 or 2 sentences, has ${n}: ${p.t}`);
+      if (p.t.split(' ').length > 20) errors.push(`${where}: page is too long: ${p.t}`);
+    });
+  }
+  // Questions: 2 or 3, spoken; answers are pictures or short decodable words; exactly one is right.
+  const qs = st.qs;
+  if (!Array.isArray(qs)) { errors.push(`${where}: no questions (qs)`); return; }
+  if (qs.length < 2 || qs.length > 3) errors.push(`${where}: needs 2 or 3 questions, has ${qs.length}`);
+  qs.forEach((q, i) => {
+    const at = `${where} question ${i + 1}`;
+    if (!q.text || !/[?]$/.test(q.text)) errors.push(`${at}: needs spoken text ending in ?`);
+    if (!['lit', 'think'].includes(q.k)) errors.push(`${at}: kind must be lit or think`);
+    if (!Array.isArray(q.opts) || q.opts.length < 2 || q.opts.length > 4) { errors.push(`${at}: needs 2 to 4 answers`); return; }
+    if (!Number.isInteger(q.a) || q.a < 0 || q.a >= q.opts.length) { errors.push(`${at}: right answer index ${q.a} is not one of the answers`); return; }
+    const norm = o => o.toLowerCase().trim();
+    if (new Set(q.opts.map(norm)).size !== q.opts.length) errors.push(`${at}: an answer appears twice`);
+    const right = q.opts.filter(o => norm(o) === norm(q.opts[q.a]));
+    if (right.length !== 1) errors.push(`${at}: the right answer is listed ${right.length} times`);
+    const emoji = q.opts.filter(isEmojiOpt).length;
+    if (emoji !== 0 && emoji !== q.opts.length) errors.push(`${at}: answers must be all pictures or all words`);
+    q.opts.forEach(o => {
+      if (isEmojiOpt(o)) return;
+      if (o.length > 24) errors.push(`${at}: answer too long: ${o}`);
+      tokens(o).forEach(w => {
+        if (w !== 'pip' && !decodable(w, known)) errors.push(`${at}: answer word "${w}" not decodable`);
+        else { const r = trapReason(w, known); if (r) errors.push(`${at}: answer word "${w}" ${r}`); }
+      });
+    });
+  });
+  if (!qs.some(q => q.k === 'lit')) errors.push(`${where}: needs at least one literal (who/what/where) question`);
+  if ((isBook || wi >= 2) && !qs.some(q => q.k === 'think')) errors.push(`${where}: needs a thinking question (why / how did they feel / what happens next)`);
 }
 
 // ---- Validate ----
@@ -39,10 +120,7 @@ lessons.forEach((l, i) => {
     const st = STORIES[l.story];
     if (!st) { errors.push(`${l.id}: missing story ${l.story}`); return; }
     seenStory.add(l.story);
-    st.pages.forEach(p => tokens(p.t).forEach(w => {
-      if (w !== 'pip' && !decodable(w, known)) errors.push(`${l.id} story ${l.story}: "${w}" not decodable in "${p.t}"`);
-    }));
-    tokens(st.title).forEach(w => { if (!decodable(w, known)) errors.push(`${l.id} story title: "${w}"`); });
+    checkStory(`${l.id} story ${l.story}`, st, known, l.wi, false);
   }
   parseSentences(l.id).forEach(x => {
     if (!/[.?!]$/.test(x.t) || !/^[A-Z]/.test(x.t)) errors.push(`${l.id}: sentence needs a capital and an end mark: ${x.t}`);
@@ -60,6 +138,13 @@ FRAMES.forEach(f => {
   else tokens(f.t).forEach(w => { if (!decodable(w, knownAt(i))) errors.push(`frame ${f.id}: "${w}" not decodable at ${f.from}`); });
 });
 Object.keys(STORIES).forEach(k => { if (!seenStory.has(k)) warn.push(`story ${k} not used by any lesson`); });
+// Big books are for children who have finished everything: they may use all the sounds and heart words.
+const allKnown = knownAt(lessons.length - 1);
+Object.keys(BOOKS).forEach(k => {
+  if (STORIES[k]) errors.push(`book ${k}: same name as a lesson story`);
+  checkStory(`book ${k}`, BOOKS[k], allKnown, 99, true);
+});
+if (Object.keys(BOOKS).length < 8) errors.push(`need at least 8 big books, have ${Object.keys(BOOKS).length}`);
 
 warn.forEach(w => console.log('warn:', w));
 if (errors.length) {
@@ -117,6 +202,7 @@ const ipaOf = seg => {
 };
 
 for (const [k, t] of Object.entries(LINES)) add('n_' + k, { voice: 'narr', text: t });
+for (const [k, t] of Object.entries(MS_LINES)) add(k, { voice: 'narr', text: t });
 for (const [k, t] of Object.entries(PIP_LINES)) add('pl_' + k, { voice: 'pip', text: t });
 for (const [g, x] of Object.entries(GRAPHEMES)) {
   add('p_' + g, { voice: 'narr', phoneme: x.ipa, v: x.v });
@@ -139,14 +225,30 @@ lessons.forEach(l => {
   add('w_' + WORDLINGS[l.id].toLowerCase(), { voice: 'narr', text: WORDLINGS[l.id] });
 });
 FRAMES.forEach(f => add(f.id, { voice: 'narr', text: f.t + ' …', frame: true }));
-for (const [k, st] of Object.entries(STORIES)) {
+for (const [k, st] of Object.entries({ ...STORIES, ...BOOKS })) {
   add(`st_${k}`, { voice: 'narr', text: st.title });
-  add(`q_${k}`, { voice: 'narr', text: st.q.text });
+  tokens(st.title).forEach(word);
+  st.qs.forEach((q, i) => {
+    add(qid(k, i), { voice: 'narr', text: q.text });
+    q.opts.forEach(o => { if (!isEmojiOpt(o)) tokens(o).forEach(word); });
+  });
   st.pages.forEach((p, i) => {
     add(`s_${k}_${i}`, { voice: 'narr', text: p.t, slow: true });
     tokens(p.t).forEach(word);
   });
 }
+// Every story and book must have all of its audio listed (it is rendered by tools/gen_audio.py).
+for (const [k, st] of Object.entries({ ...STORIES, ...BOOKS })) {
+  const need = [`st_${k}`, ...st.qs.map((_, i) => qid(k, i)), ...st.pages.map((_, i) => `s_${k}_${i}`)];
+  st.qs.forEach(q => q.opts.forEach(o => { if (!isEmojiOpt(o)) tokens(o).forEach(w => need.push('w_' + w)); }));
+  need.forEach(id => { if (!items.has(id)) errors.push(`${k}: audio ${id} is not in the manifest`); });
+}
+if (errors.length) { errors.forEach(e => console.log('ERROR:', e)); process.exit(1); }
 mkdirSync(new URL('../work/', import.meta.url), { recursive: true });
 writeFileSync(new URL('../work/manifest.json', import.meta.url), JSON.stringify([...items.values()], null, 1));
-console.log(`ok: ${lessons.length} lessons, ${Object.keys(STORIES).length} stories, ${items.size} audio clips`);
+const missing = [...items.keys()].filter(id => !id.startsWith('p_') && !existsSync(new URL(`../app/audio/${id}.mp3`, import.meta.url)));
+if (missing.length) {
+  console.log(`note: ${missing.length} audio clips are listed but not rendered yet: ${missing.slice(0, 12).join(' ')}${missing.length > 12 ? ' ...' : ''}`);
+  if (process.argv.includes('--require-audio')) { console.log('ERROR: audio missing'); process.exit(1); }
+}
+console.log(`ok: ${lessons.length} lessons, ${Object.keys(STORIES).length} stories, ${Object.keys(BOOKS).length} big books, ${items.size} audio clips`);

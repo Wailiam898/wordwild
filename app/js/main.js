@@ -1,5 +1,5 @@
-import { WORLDS, GRAPHEMES, STORIES, WORDLINGS, HATS, LINES, PIP_LINES, FRAMES, NOT_THINGS, NAMES, SILENT_E, isSplit,
-  label, parseWords, parseSentences, sentenceWords, segment, allLessons, knownAt } from './data.js';
+import { WORLDS, GRAPHEMES, STORIES, BOOKS, storyOf, WORDLINGS, HATS, LINES, PIP_LINES, FRAMES, NOT_THINGS, NAMES, SILENT_E, isSplit,
+  label, parseWords, parseSentences, sentenceWords, segment, allLessons, knownAt, BONUS_KINDS, BONUS_INFO } from './data.js';
 import * as audio from './audio.js';
 import { say, sfx, preload, stopSpeech } from './audio.js';
 import { h, onTap, sleep, shuffle, anim, burstAt, confetti, flyGems, clearFx } from './ui.js';
@@ -7,7 +7,11 @@ import { pipSVG, wordlingSVG, eggSVG } from './art.js';
 import * as store from './store.js';
 import * as games from './games.js';
 import * as cloud from './cloud.js';
+import * as trace from './trace.js';
+import * as readaloud from './readaloud.js';
 import { loginFlow, changeCode, joinCloud } from './login.js';
+import { playMilestone } from './milestone.js';
+import { skySVG, groundSVG } from './scenery.js';
 
 const app = document.getElementById('app');
 const LESSONS = allLessons();
@@ -73,13 +77,13 @@ function titleScreen() {
 // ================================================================ Map
 const NODE_X = [50, 74, 56, 28, 44, 70];
 const DECOR = {
-  sands: ['🌴', '🐚', '🦀', '⛱️', '🌊', '🐠', '🌴', '🐢'],
-  jungle: ['🌴', '🦜', '🐒', '🌺', '🍌', '🦋', '🌿', '🐸'],
-  volcano: ['🌋', '🔥', '🦖', '🪨', '🌶️', '🦎', '🌋', '🔥'],
-  caves: ['💎', '🔮', '🦇', '✨', '🍄', '💎', '🌟', '🔮'],
-  clouds: ['☁️', '🌈', '🎈', '🪁', '🕊️', '☁️', '⭐', '🌤️'],
-  reef: ['🐠', '🪸', '🐙', '🐚', '🦀', '🐡', '🫧', '🐢'],
-  space: ['🚀', '🪐', '⭐', '🌙', '👽', '☄️', '🛸', '🌟'],
+  farm: ['🌻', '🚜', '🐄', '🌾', '🐑', '🏡', '🌻', '🐖'],
+  meadow: ['🌼', '🦋', '🐞', '🌷', '🍄', '🐝', '🌳', '🌸'],
+  pond: ['🦆', '🐸', '🌿', '🐟', '🦆', '🫧', '🐢', '🌱'],
+  loft: ['🌾', '🐈', '🧺', '🐭', '🥕', '🌽', '🕯️', '🦉'],
+  coop: ['☁️', '🥚', '🌈', '🐓', '🕊️', '☁️', '🌤️', '🥚'],
+  shore: ['🐚', '🦀', '🏖️', '🌊', '🐠', '⛱️', '🐚', '🐢'],
+  roost: ['🌙', '⭐', '🦉', '✨', '🌟', '🐞', '🏡', '✨'],
 };
 
 function mapScreen() {
@@ -92,6 +96,7 @@ function mapScreen() {
     const n = wd.lessons.length;
     const rowH = 150;
     const sec = h('section', { class: 'world theme-' + wd.theme });
+    sec.append(h('div', { class: 'world-scenery', html: skySVG(wd.theme) + groundSVG(wd.theme) }));
     sec.append(h('div', { class: 'world-banner' }, h('span', {}, DECOR[wd.theme][0]), wd.name));
     const field = h('div', { class: 'world-field', style: { height: n * rowH + 110 + 'px' } });
     const pts = wd.lessons.map((_, k) => [NODE_X[(li + k) % NODE_X.length], k * rowH + 150]);
@@ -125,10 +130,12 @@ function mapScreen() {
     sec.append(field);
     scroller.append(sec);
   });
-  const allDone = LESSONS.every(L => s.done[L.id]);
+  const allDone = everythingDone();
+  const doneBtns = allDone ? h('div', { class: 'end-btns' },
+    bigBtn('🌟', 'Daily practice', startPractice), bigBtn('📚', 'Big books', () => libraryScreen('big'))) : null;
   scroller.append(h('section', { class: 'world theme-sky' },
     h('div', { class: 'world-banner' }, h('span', {}, '🏆'), 'Super Reader'),
-    h('div', { class: 'coming' }, allDone ? '🏆 🎉 🏆' : '🏆', h('small', {}, allDone ? 'You finished every world!' : 'Finish every world to get here'))));
+    h('div', { class: 'coming' }, allDone ? '🏆 🎉 🏆' : '🏆', h('small', {}, allDone ? 'You finished every world!' : 'Finish every world to get here'), doneBtns)));
 
   const settingsBtn = h('button', { class: 'btn round gear', 'aria-label': 'Grown-ups' }, h('span', {}, '⚙️'), h('i', { class: 'hold-ring' }));
   holdToOpen(settingsBtn, parentScreen);
@@ -139,7 +146,11 @@ function mapScreen() {
     dockBtn('📚', 'Books', libraryScreen, s.books.length),
     dockBtn('🎮', 'Play', arcadeScreen),
   );
-  show('map', h('div', { class: 'map' }, scroller, hud, dock));
+  // Daily practice opens once World 1 is finished.
+  const fab = worldOneDone() ? onTap(h('button', { class: 'practice-fab' + (store.practicedToday() ? '' : ' fresh'), 'aria-label': 'Daily practice' },
+    h('span', { class: 'fab-ico' }, '🌟'), h('span', { class: 'fab-lbl' }, 'Practice'), store.practicedToday() ? null : h('i', { class: 'fab-new' }, '✨')),
+    () => { sfx('tap'); startPractice(); }) : null;
+  show('map', h('div', { class: 'map' }, scroller, hud, fab, dock));
   audio.startMusicIfOn();
   requestAnimationFrame(() => {
     if (curNode) curNode.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -261,7 +272,7 @@ function lessonPlan(i) {
     steps.push(['pop', shuffle([...grp, ...grp, ...L.g.slice(0, k)]).slice(0, Math.max(4, grp.length * 2))]);
   }
   const nb = 2;
-  ordered.slice(0, nb).forEach((w, k) => steps.push(['blast', w, k === 0]));
+  ordered.slice(0, nb).forEach((w, k) => steps.push(['hop', w, k === 0]));
   if (L.review) steps.push(['speed', shuffle(pics).slice(0, 6)]);
   // Long words: chop them into parts.
   shuffle(words.filter(w => w.syl)).slice(0, 2).forEach(w => steps.push(['chop', w]));
@@ -321,6 +332,28 @@ function lessonPlan(i) {
   return { L, known, steps: steps.filter(Boolean), all };
 }
 
+// Starts one activity of a lesson or of daily practice.
+function runStep(G, type, a, b) {
+  if (type === 'pop') return games.soundPop(G, a);
+  if (type === 'meet') return games.meet(G, a);
+  if (type === 'hop') return games.hop(G, a, b);
+  if (type === 'forge') return games.forge(G, a);
+  if (type === 'heart') return games.heartWord(G, a, b);
+  if (type === 'pip') return games.teachPip(G, a, hatEmoji());
+  if (type === 'speed') return games.speedRead(G, a);
+  if (type === 'story') return games.story(G, a, { hat: hatEmoji() });
+  if (type === 'chop') return games.chop(G, a);
+  if (type === 'memory') return games.memory(G, a);
+  if (type === 'ladder') return games.ladder(G, a);
+  if (type === 'sort') return games.spellSort(G, a, b);
+  if (type === 'build') return games.buildSentence(G, a);
+  if (type === 'silly') return games.sillyOrNot(G, a);
+  if (type === 'fix') return games.fixIt(G, a, b);
+  if (type === 'dict') return games.dictation(G, a, b);
+  if (type === 'finish') return games.finishSentence(G, a, b);
+  return Promise.resolve({ right: 0, total: 0 });
+}
+
 async function startLesson(i) {
   const { L, known, steps, all } = lessonPlan(i);
   const wd = WORLDS[L.wi];
@@ -353,6 +386,7 @@ async function startLesson(i) {
   let gemsEarned = 0;
   const G = {
     stage, known, pool, words: all, newG: L.g, hat: hatEmoji(),
+    ra: { used: 0, max: 2 },   // "Read it to Pip" (optional): at most twice per lesson
     setReplay: fn => (replayFn = fn),
     gem: (el, n) => { gemsEarned += n; store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); },
   };
@@ -366,24 +400,7 @@ async function startLesson(i) {
     stage.className = 'stage step-' + type;
     for (const k in stage.dataset) delete stage.dataset[k];
     G.onExit = null;
-    let run;
-    if (type === 'pop') run = games.soundPop(G, a);
-    else if (type === 'meet') run = games.meet(G, a);
-    else if (type === 'blast') run = games.blast(G, a, b);
-    else if (type === 'forge') run = games.forge(G, a);
-    else if (type === 'heart') run = games.heartWord(G, a, b);
-    else if (type === 'pip') run = games.teachPip(G, a, hatEmoji());
-    else if (type === 'speed') run = games.speedRead(G, a);
-    else if (type === 'story') run = games.story(G, a, { hat: hatEmoji() });
-    else if (type === 'chop') run = games.chop(G, a);
-    else if (type === 'memory') run = games.memory(G, a);
-    else if (type === 'ladder') run = games.ladder(G, a);
-    else if (type === 'sort') run = games.spellSort(G, a, b);
-    else if (type === 'build') run = games.buildSentence(G, a);
-    else if (type === 'silly') run = games.sillyOrNot(G, a);
-    else if (type === 'fix') run = games.fixIt(G, a, b);
-    else if (type === 'dict') run = games.dictation(G, a, b);
-    else if (type === 'finish') run = games.finishSentence(G, a, b);
+    const run = runStep(G, type, a, b);
     const res = await Promise.race([run, abortP]);
     if (!res || aborted) return;
     right += res.right; total += res.total;
@@ -402,6 +419,7 @@ function themeBg(theme) {
   const spots = [[4, 18], [86, 26], [8, 62], [84, 70], [46, 8]];
   return h('div', { class: 'lesson-bg' },
     ...Array.from({ length: 8 }, (_, k) => h('i', { style: { '--k': k } })),
+    h('div', { class: 'bg-scene', html: groundSVG(theme) }),
     ...DECOR[theme].slice(0, 5).map((e, k) => h('b', { class: 'bg-decor', style: { left: spots[k][0] + '%', top: spots[k][1] + '%', animationDelay: -k * 0.7 + 's' } }, e)));
 }
 
@@ -416,6 +434,8 @@ function confirmLeave(yes) {
 }
 
 // ================================================================ Egg hatch + rewards
+// How long the egg wobbles before it cracks (about a second; a tap cracks it sooner).
+const HATCH_WAIT_MS = 1000;
 async function hatchScreen(L, stars, first, gems) {
   const name = WORDLINGS[L.id];
   const egg = h('div', { class: 'hatch-egg', html: eggSVG(name, 0, L.review) });
@@ -425,42 +445,53 @@ async function hatchScreen(L, stars, first, gems) {
   show('hatch', wrap);
   starsEl.querySelectorAll('.on').forEach((s, k) => setTimeout(() => { s.classList.add('pop'); sfx('coin'); }, 400 + k * 350));
   confetti(60);
-  await say('n_lesson_done');
-  if (!first && store.state().wordlings.includes(L.id)) {
+  performance.mark('hatch-shown');
+  const repeat = !first && store.state().wordlings.includes(L.id);
+  if (repeat) {
     // Replays award gems, not a second Wordling.
+    await say('n_lesson_done');
     egg.remove();
     return finishRewards(wrap, gems, null);
   }
-  await say('n_egg_hatch');
-  let cracks = 0;
+  const lastLesson = L.id === LESSONS[LESSONS.length - 1].id;
+  // "Lesson complete!" plays while the egg wobbles; nothing waits for it before the crack.
+  // The egg wobbles for about a second, then cracks by itself (a tap makes it crack sooner).
+  const spoken = say('n_lesson_done');
+  egg.classList.add('wobble');
   await new Promise(resolve => {
-    onTap(egg, () => {
-      if (cracks >= 3) return;
-      cracks++;
-      sfx('crack');
-      egg.innerHTML = eggSVG(name, cracks, L.review);
-      anim(egg, 'shake', 400);
-      burstAt(egg, 10, 'circle');
-      if (cracks >= 3) resolve();
-    });
+    let t = setTimeout(resolve, HATCH_WAIT_MS);
+    onTap(egg, () => { clearTimeout(t); resolve(); });
   });
+  egg.classList.remove('wobble');
+  performance.mark('hatch-crack');
+  for (let cracks = 1; cracks <= 3; cracks++) {
+    sfx('crack');
+    egg.innerHTML = eggSVG(name, cracks, L.review);
+    anim(egg, 'shake', 400);
+    burstAt(egg, 10, 'circle');
+    if (cracks < 3) await sleep(250);
+  }
   await sleep(300);
   sfx('fanfare');
   egg.classList.add('burst');
   burstAt(egg, 60);
   confetti(120);
   await sleep(350);
-  const wl = h('div', { class: 'hatch-wl pop-in', html: wordlingSVG(name) });
+  const wl = h('div', { class: 'hatch-wl pop-in', html: wordlingSVG(name, false, { shell: true }) });
   const label = h('div', { class: 'wl-name pop-in' }, name);
   egg.replaceWith(h('div', { class: 'hatch-reveal' }, wl, label));
   store.addWordling(L.id);
+  await spoken;   // never cut off "Lesson complete!"
   await say('n_egg_meet', 200, 'w_' + name.toLowerCase());
   onTap(wl, () => { anim(wl, 'jump', 700); say('w_' + name.toLowerCase()); });
-  if (L.id === LESSONS[LESSONS.length - 1].id) { confetti(200); sfx('fanfare'); await say('n_the_end'); }
-  finishRewards(wrap, gems, wl);
+  if (lastLesson) { confetti(200); sfx('fanfare'); await say('n_the_end'); }
+  const worldEnd = LESSONS.filter(x => x.wi === L.wi).pop().id === L.id;
+  finishRewards(wrap, gems, wl, lastLesson, first && worldEnd ? L.wi : null);
 }
 
-function finishRewards(wrap, gems, from) {
+// bonusWi: after the first time a world's last lesson is finished, the "World complete! Bonus game!" moment comes next.
+// after: something else to do instead of going back to the map (used by the bonus reward screen).
+function finishRewards(wrap, gems, from, toFinished, bonusWi = null, after = null) {
   const pill = gemPill();
   const go = h('button', { class: 'btn big go pop-in' }, '▶');
   wrap.append(h('div', { class: 'reward-row' }, pill, go));
@@ -468,26 +499,217 @@ function finishRewards(wrap, gems, from) {
   setTimeout(refreshGems, 1200);
   onTap(go, () => {
     sfx('tap');
-    mapScreen();
+    const next = after || (toFinished ? finishedScreen : mapScreen);
+    if (bonusWi != null) worldCompleteMoment(bonusWi, next); else next();
   });
+}
+
+// ================================================================ Bonus games (one per world)
+const BONUS_GEMS_PER_STAR = 5;
+
+// "World complete! Bonus game!" then the world's game. Opening it counts as unlocking it, even if the child quits.
+async function worldCompleteMoment(wi, next) {
+  const kind = BONUS_KINDS[wi], info = BONUS_INFO[kind], wd = WORLDS[wi];
+  store.recordBonus(wi);
+  const go = h('button', { class: 'btn big go pop-in', 'aria-label': 'Play ' + info.title }, '▶');
+  const pip = h('div', { class: 'practice-pip', html: pipSVG('wow', hatEmoji()) });
+  const wrap = h('div', { class: 'hatch world-done' }, h('div', { class: 'rays' }), pip,
+    h('div', { class: 'wd-title pop-in' }, 'World complete!'),
+    h('div', { class: 'wd-world' }, wd.name),
+    h('div', { class: 'wd-game pop-in' }, h('span', {}, info.icon), 'Bonus game: ' + info.title),
+    go);
+  show('hatch', wrap, wd.theme);
+  confetti(100); sfx('fanfare');
+  onTap(pip, () => { anim(pip, 'jump', 700); sfx('boing'); });
+  say('n_world_done');
+  let started = false;
+  onTap(go, async () => {
+    if (started) return;
+    started = true; sfx('tap');
+    await runBonus(wi, next);
+  });
+}
+
+// Plays the game; a quit gives nothing; stars give gems (5 each) and a best that is kept.
+async function runBonus(wi, next) {
+  const kind = BONUS_KINDS[wi];
+  let r;
+  try { r = await (window.__wwPlayMilestone || playMilestone)(kind, wi); } catch (e) { console.error("bonus game failed", e); r = { score: 0, stars: 0, quit: true }; }
+  store.recordBonus(wi, r.quit ? {} : { stars: r.stars, score: r.score });
+  const stars = r.quit ? 0 : r.stars | 0;
+  if (stars > 0) bonusReward(stars, stars * BONUS_GEMS_PER_STAR, next); else next();
+}
+
+function bonusReward(stars, gems, next) {
+  store.addGems(gems);
+  const starsEl = h('div', { class: 'big-stars' }, ...[0, 1, 2].map(k => h('span', { class: k < stars ? 'on' : '' }, '⭐')));
+  const pip = h('div', { class: 'practice-pip', html: pipSVG('wow', hatEmoji()) });
+  const wrap = h('div', { class: 'hatch practice-done' }, h('div', { class: 'rays' }), starsEl, pip);
+  show('hatch', wrap);
+  starsEl.querySelectorAll('.on').forEach((el, k) => setTimeout(() => { el.classList.add('pop'); sfx('coin'); }, 400 + k * 350));
+  confetti(80); sfx('fanfare');
+  onTap(pip, () => { anim(pip, 'jump', 700); sfx('boing'); });
+  say('n_praise' + (1 + Math.floor(Math.random() * 12)));
+  finishRewards(wrap, gems, pip, false, null, next);
+}
+
+// ================================================================ Daily practice
+// A short mix of what is due for review across every world finished so far, using the usual activities.
+// It never runs out: what is due comes first, then the weakest, then anything not yet seen.
+const finishedIndex = () => LESSONS.reduce((m, L, i) => (store.state().done[L.id] ? i : m), -1);
+
+function practicePlan() {
+  const idx = Math.max(3, finishedIndex());
+  const known = knownAt(idx);
+  const all = wordsUpTo(idx);
+  const pics = all.filter(x => x.e && x.seg);
+  const byWord = new Map(all.map(x => [x.w, x]));
+  const used = new Set();
+  const pickWords = (pool, n) => store.pickDue(pool.filter(x => !used.has(x.w)).map(x => x.w), n, 'w:').map(w => { used.add(w); return byWord.get(w); });
+  const steps = [];
+  steps.push(['pop', store.pickDue([...known.g], 4, 'g:')]);
+  pickWords(pics, 2).forEach((w, k) => steps.push(['hop', w, k === 0]));
+  store.pickDue([...known.h], 2, 'h:').forEach(hw => steps.push(['heart', hw, false]));
+  steps.push(['speed', pickWords(pics, 3)]);
+  steps.push(['memory', pickWords(pics, 3)]);
+  const sents = sentencesUpTo(idx);
+  const sensible = sents.filter(x => !x.silly), silly = sents.filter(x => x.silly);
+  const day = Math.floor(Date.now() / 86400000);
+  if (silly.length && (day % 2 === 0 || !sensible.length)) steps.push(['silly', shuffle(silly)[0]]);
+  else if (sensible.length) steps.push(['build', shuffle(sensible.slice(0, 10))[0]]);
+  const spell = pickWords(all.filter(x => x.seg.length <= 5 && x.seg.length >= 3 && !x.syl), 1)[0];
+  if (spell) steps.push(['forge', spell]);
+  return { idx, known, all, pics, steps: steps.filter(Boolean) };
+}
+
+async function startPractice() {
+  const { idx, known, all, pics, steps } = practicePlan();
+  const doneIdx = LESSONS.map((L, i) => (store.state().done[L.id] ? i : -1)).filter(i => i >= 0);
+  const wd = WORLDS[LESSONS[shuffle(doneIdx)[0] ?? idx].wi];
+  const need = ['n_praise1', 'n_oops1', 'n_practice_go'];
+  steps.forEach(st => {
+    if (st[0] === 'pop') st[1].forEach(g => need.push('p_' + g));
+    if (st[0] === 'hop' || st[0] === 'forge') { need.push('w_' + st[1].w); st[1].seg.forEach(g => need.push('p_' + g)); }
+    if (st[0] === 'heart') need.push('w_' + st[1]);
+    if (st[0] === 'speed' || st[0] === 'memory') st[1].forEach(x => { need.push('w_' + x.w); x.seg.forEach(g => need.push('p_' + g)); });
+    if (st[0] === 'build' || st[0] === 'silly') need.push(st[1].id, ...sentenceWords(st[1].t).map(w => 'w_' + w.toLowerCase()));
+  });
+  preload(Object.keys(LINES).map(k => 'n_' + k).concat(Object.keys(PIP_LINES).map(k => 'pl_' + k), need));
+
+  const stage = h('div', { class: 'stage' });
+  const dots = h('div', { class: 'progress' }, h('div', { class: 'progress-fill' }), h('div', { class: 'progress-pip', html: pipSVG('happy', hatEmoji()) }));
+  const replayBtn = h('button', { class: 'btn round replay', 'aria-label': 'Hear again' }, '🔊');
+  const home = h('button', { class: 'btn round back', 'aria-label': 'Map' }, '🏠');
+  let aborted = false, abort;
+  const abortP = new Promise(r => (abort = r));
+  onTap(home, () => confirmLeave(() => { aborted = true; abort(null); stopSpeech(); G.onExit && G.onExit(); mapScreen(); }));
+  let replayFn = null;
+  onTap(replayBtn, () => { sfx('tap'); anim(replayBtn, 'boing'); replayFn && replayFn(); });
+  show('lesson', h('div', { class: 'lesson' }, themeBg(wd.theme), h('div', { class: 'topbar' }, home, dots, gemPill(), replayBtn), stage), wd.theme);
+  audio.startMusicIfOn();
+
+  let gemsEarned = 0;
+  const G = {
+    stage, known, pool: pics, words: all, newG: [], hat: hatEmoji(), practice: true,
+    ra: { used: 2, max: 2 },   // no microphone step in daily practice
+    setReplay: fn => (replayFn = fn),
+    gem: (el, n) => { gemsEarned += n; store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); },
+  };
+  say('n_practice_go');
+  await sleep(1800);
+  let right = 0, total = 0;
+  for (let k = 0; k < steps.length; k++) {
+    if (aborted) return;
+    const p = k / steps.length;
+    dots.firstChild.style.width = p * 100 + '%';
+    dots.lastChild.style.left = p * 100 + '%';
+    const [type, a, b] = steps[k];
+    stage.className = 'stage step-' + type;
+    for (const key in stage.dataset) delete stage.dataset[key];
+    G.onExit = null;
+    const res = await Promise.race([runStep(G, type, a, b), abortP]);
+    if (!res || aborted) return;
+    right += res.right; total += res.total;
+    await sleep(250);
+  }
+  dots.firstChild.style.width = '100%';
+  dots.lastChild.style.left = '100%';
+  practiceDone(total ? right / total : 1, gemsEarned);
+}
+
+// The small reward at the end of daily practice: a stamp, and gems (more for the first round of the day).
+async function practiceDone(acc, earned) {
+  const stars = acc >= 0.9 ? 3 : acc >= 0.7 ? 2 : 1;
+  const { first } = store.recordPractice();
+  const bonus = first ? 10 : 3;
+  store.addGems(bonus);
+  const badge = h('div', { class: 'practice-badge pop-in' }, '🌟');
+  const starsEl = h('div', { class: 'big-stars' }, ...[0, 1, 2].map(k => h('span', { class: k < stars ? 'on' : '' }, '⭐')));
+  const pip = h('div', { class: 'practice-pip', html: pipSVG('wow', hatEmoji()) });
+  const wrap = h('div', { class: 'hatch practice-done' }, h('div', { class: 'rays' }), starsEl, badge, pip);
+  show('hatch', wrap);
+  starsEl.querySelectorAll('.on').forEach((s, k) => setTimeout(() => { s.classList.add('pop'); sfx('coin'); }, 400 + k * 350));
+  confetti(80); sfx('fanfare');
+  onTap(badge, () => { anim(badge, 'jump', 700); sfx('boing'); });
+  await say('n_practice_done');
+  finishRewards(wrap, earned + bonus, badge);
+}
+
+// Shown after the very last lesson: where to go next.
+function bigBtn(icon, label, fn) {
+  return onTap(h('button', { class: 'end-btn' }, h('span', { class: 'end-ico' }, icon), h('span', { class: 'end-lbl' }, label)), () => { sfx('tap'); fn(); });
+}
+function finishedScreen() {
+  const card = (icon, title, fn, cls) => onTap(h('button', { class: 'arcade-card pop-in ' + cls },
+    h('div', { class: 'arc-ico' }, icon), h('div', { class: 'arc-title' }, title)), () => { sfx('tap'); fn(); });
+  show('arcade-menu', h('div', { class: 'arcade finished' },
+    h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()),
+    h('div', { class: 'finished-pip', html: pipSVG('wow', hatEmoji()) }),
+    h('div', { class: 'arcade-cards' }, card('🌟', 'Daily practice', startPractice, 'fin-practice'), card('📚', 'Big books', () => libraryScreen('big'), 'fin-books'))));
+  confetti(60);
+  say('n_end_next');
 }
 
 // ================================================================ Zoo
 function zooScreen() {
   const s = store.state();
   const meadow = h('div', { class: 'meadow' });
-  s.wordlings.forEach((id, k) => {
+  const roamers = s.wordlings.map((id, k) => {
     const name = WORDLINGS[id];
-    const wl = h('div', { class: 'roam', style: { left: 8 + (k * 37) % 76 + '%', top: 10 + (k * 23) % 62 + '%', '--d': (6 + (k % 5)) + 's', '--dx': ((k % 2 ? 1 : -1) * (20 + k * 7 % 40)) + 'px' } },
+    const wl = h('div', { class: 'roam', style: { '--d': (6 + (k % 5)) + 's', '--dx': ((k % 2 ? 1 : -1) * (8 + k * 7 % 14)) + 'px' } },
       h('div', { class: 'roam-body', html: wordlingSVG(name) }), h('div', { class: 'roam-name' }, name));
     onTap(wl, () => { anim(wl, 'jump', 700); sfx('boing'); say('w_' + name.toLowerCase()); burstAt(wl, 12); });
     meadow.append(wl);
+    return wl;
   });
-  const shelf = h('div', { class: 'collection' }, Object.entries(WORDLINGS).map(([id, name]) =>
-    h('div', { class: 'slot' + (s.wordlings.includes(id) ? ' got' : '') , html: wordlingSVG(name, !s.wordlings.includes(id)) })));
+  // Lay the chicks out on a loose grid sized to the meadow, so even 34 of them each have their own spot.
+  const layout = () => {
+    const r = meadow.getBoundingClientRect(), n = roamers.length;
+    if (!n || !r.width) return;
+    const cols = Math.max(1, Math.round(Math.sqrt(n * r.width / Math.max(1, r.height))));
+    const rows = Math.ceil(n / cols);
+    const cw = r.width / cols, ch = r.height / rows;
+    const size = Math.max(46, Math.min(cw * 0.96, ch * 0.78, 150));
+    roamers.forEach((wl, k) => {
+      const c = k % cols, row = Math.floor(k / cols);
+      wl.style.width = size + 'px';
+      wl.style.left = c * cw + (cw - size) / 2 + ((row % 2) ? cw * 0.06 : -cw * 0.04) + 'px';
+      wl.style.top = row * ch + (ch - size * 1.15) / 2 + 'px';
+      wl.firstChild.nextSibling.style.fontSize = Math.max(11, Math.min(24, size * 0.2)) + 'px';
+    });
+  };
+  const shelf = h('div', { class: 'collection' }, Object.entries(WORDLINGS).map(([id, name]) => {
+    const got = s.wordlings.includes(id);
+    const card = h('div', { class: 'zslot' + (got ? ' got' : ''), 'data-id': id },
+      h('div', { class: 'zslot-art', html: wordlingSVG(name, !got) }), h('div', { class: 'zslot-name' }, got ? name : '?'));
+    if (got) onTap(card, () => { anim(card, 'boing'); sfx('boing'); say('w_' + name.toLowerCase()); });
+    return card;
+  }));
   show('zoo', h('div', { class: 'zoo' },
     h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'count-pill' }, `🐾 ${s.wordlings.length} / ${Object.keys(WORDLINGS).length}`), gemPill()),
     meadow, shelf));
+  layout();
+  requestAnimationFrame(layout);
   say(s.wordlings.length ? 'n_zoo' : 'n_map_tap');
 }
 
@@ -522,7 +744,17 @@ function shopScreen() {
 }
 
 // ================================================================ Library
-function libraryScreen() {
+// Big books are for children who have finished every world. Each one opens after the one before it has been read.
+const worldOneDone = () => WORLDS[0].lessons.every(L => store.state().done[L.id]);
+const everythingDone = () => LESSONS.every(L => store.state().done[L.id]);
+function bigBookState() {
+  const s = store.state();
+  const ids = Object.keys(BOOKS);
+  const all = everythingDone();
+  return ids.map((id, i) => ({ id, read: s.books.includes(id), open: all && (i === 0 || s.books.includes(ids[i - 1])) }));
+}
+
+function libraryScreen(focus) {
   const s = store.state();
   const shelf = h('div', { class: 'shelf' });
   Object.entries(STORIES).forEach(([id, st]) => {
@@ -531,24 +763,43 @@ function libraryScreen() {
     if (got) onTap(b, () => { sfx('tap'); rereadStory(id); });
     shelf.append(b);
   });
-  show('library', h('div', { class: 'library' }, h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()), shelf));
-  say('n_library');
+  let bigShelf = null, bigTitle = null;
+  if (everythingDone()) {
+    bigTitle = h('div', { class: 'shelf-title' }, h('span', {}, '📚'), 'Big books');
+    bigShelf = h('div', { class: 'shelf big-shelf' });
+    bigBookState().forEach(b => {
+      const bk = BOOKS[b.id];
+      const el = h('button', { class: 'book big' + (b.open ? '' : ' locked') + (b.open && !b.read ? ' fresh' : ''), 'data-book': b.id },
+        h('span', { class: 'book-e' }, b.open ? bk.cover : '🔒'), h('span', { class: 'book-t' }, b.open ? bk.title : ''));
+      onTap(el, () => {
+        if (b.open) { sfx('tap'); rereadStory(b.id); }
+        else { sfx('bad'); anim(el, 'shake'); say('n_book_locked'); }
+      });
+      bigShelf.append(el);
+    });
+  }
+  show('library', h('div', { class: 'library' }, h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()), shelf, bigTitle, bigShelf));
+  say(focus === 'big' && bigShelf ? 'n_bigbooks' : 'n_library');
+  if (focus === 'big' && bigTitle) requestAnimationFrame(() => bigTitle.scrollIntoView({ block: 'start' }));
 }
 
 async function rereadStory(id) {
-  const lessonIdx = LESSONS.findIndex(L => L.story === id);
+  const isBook = !!BOOKS[id];
+  const lessonIdx = isBook ? LESSONS.length - 1 : LESSONS.findIndex(L => L.story === id);
   const stage = h('div', { class: 'stage step-story' });
   let replayFn = null;
   const replayBtn = h('button', { class: 'btn round replay' }, '🔊');
   onTap(replayBtn, () => replayFn && replayFn());
   const theme = WORLDS[LESSONS[lessonIdx].wi].theme;
   let aborted = false, abort; const abortP = new Promise(r => (abort = r));
+  // A big book read for the first time is a real first reading (its questions are saved); a book already read is a re-read.
+  const alreadyRead = store.state().books.includes(id);
   show('story', h('div', { class: 'lesson' }, themeBg(theme),
-    h('div', { class: 'topbar' }, backBtn(() => { aborted = true; abort(null); libraryScreen(); }), h('div', { class: 'hud-spacer' }), gemPill(), replayBtn), stage), theme);
-  const G = { stage, known: knownAt(lessonIdx), pool: pictureWordsUpTo(lessonIdx), setReplay: f => (replayFn = f),
+    h('div', { class: 'topbar' }, backBtn(() => { aborted = true; abort(null); libraryScreen(isBook ? 'big' : undefined); }), h('div', { class: 'hud-spacer' }), gemPill(), replayBtn), stage), theme);
+  const G = { stage, known: knownAt(lessonIdx), pool: pictureWordsUpTo(lessonIdx), setReplay: f => (replayFn = f), hat: hatEmoji(), ra: { used: 0, max: 1 },
     gem: (el, n) => { store.addGems(n); flyGems(el, n); setTimeout(refreshGems, 900); } };
-  const res = await Promise.race([games.story(G, id, { reread: true, hat: hatEmoji() }), abortP]);
-  if (res && !aborted) libraryScreen();
+  const res = await Promise.race([games.story(G, id, { reread: alreadyRead, hat: hatEmoji() }), abortP]);
+  if (res && !aborted) libraryScreen(isBook ? 'big' : undefined);
 }
 
 // ================================================================ Arcade
@@ -557,18 +808,34 @@ function arcadeScreen() {
   const doneIdx = Math.max(0, LESSONS.reduce((m, L, i) => (s.done[L.id] ? i : m), 0));
   const card = (icon, title, best, fn) => onTap(h('button', { class: 'arcade-card pop-in' },
     h('div', { class: 'arc-ico' }, icon), h('div', { class: 'arc-title' }, title), h('div', { class: 'arc-best' }, '🏆 ' + best)), () => { sfx('tap'); fn(); });
-  show('arcade-menu', h('div', { class: 'arcade' },
+  // One bonus game per world: locked until the world is finished, then replayable with the best stars kept.
+  const bonus = WORLDS.map((wd, wi) => {
+    const info = BONUS_INFO[BONUS_KINDS[wi]];
+    const open = store.bonusUnlocked(wi), best = store.bonusBest(wi);
+    const b = h('button', { class: 'bonus-card pop-in' + (open ? '' : ' locked'), 'data-world': String(wi), 'data-kind': BONUS_KINDS[wi], 'aria-label': open ? info.title : info.title + ' (locked)' },
+      h('div', { class: 'bonus-ico' }, open ? info.icon : '🔒'),
+      h('div', { class: 'bonus-name' }, info.title),
+      h('div', { class: 'bonus-sub' }, open ? '⭐'.repeat(best.stars) + '☆'.repeat(3 - best.stars) : 'Finish World ' + (wi + 1) + '!'));
+    onTap(b, () => {
+      if (open) { sfx('tap'); runBonus(wi, arcadeScreen); } else { sfx('bad'); anim(b, 'shake'); }
+    });
+    return b;
+  });
+  show('arcade-menu', h('div', { class: 'arcade play' },
     h('div', { class: 'hud' }, backBtn(mapScreen), h('div', { class: 'hud-spacer' }), gemPill()),
-    h('div', { class: 'arcade-cards' },
-      card('🫧', 'Bubble Blitz', s.best.pop, () => playArcade('pop', doneIdx)),
-      card('🚀', 'Rocket Read', s.best.rocket, () => playArcade('rocket', doneIdx)),
-      card('🃏', 'Memory Match', s.best.memory || 0, () => playArcade('memory', doneIdx)))));
+    h('div', { class: 'arcade-scroll' },
+      h('div', { class: 'arcade-cards' },
+        card('🫧', 'Bubble Blitz', s.best.pop, () => playArcade('pop', doneIdx)),
+        card('🐤', 'Hop Read', s.best.rocket, () => playArcade('hop', doneIdx)),   // the saved best keeps its old key (best.rocket)
+        card('🃏', 'Memory Match', s.best.memory || 0, () => playArcade('memory', doneIdx))),
+      h('div', { class: 'bonus-title' }, '🌟 Bonus games'),
+      h('div', { class: 'bonus-grid' }, ...bonus))));
 }
 
 async function playArcade(kind, idx) {
   const known = knownAt(idx);
   const pool = pictureWordsUpTo(idx);
-  const stage = h('div', { class: 'stage step-' + { pop: 'pop', rocket: 'speed', memory: 'memory' }[kind] });
+  const stage = h('div', { class: 'stage step-' + { pop: 'pop', hop: 'speed', memory: 'memory' }[kind] });
   let replayFn = null;
   const replayBtn = h('button', { class: 'btn round replay' }, '🔊');
   onTap(replayBtn, () => replayFn && replayFn());
@@ -587,7 +854,7 @@ async function playArcade(kind, idx) {
   const res = await Promise.race([run, abortP]);
   if (!res || aborted) return;
   const s = store.state();
-  const key = kind;
+  const key = kind === 'hop' ? 'rocket' : kind;   // saved under its old name so earlier saves keep their best
   const isBest = res.score > (s.best[key] || 0);
   if (isBest) { s.best[key] = res.score; store.save(); }
   stage.innerHTML = '';
@@ -616,6 +883,20 @@ function parentScreen() {
   const weakWords = Object.entries(s.items).filter(([k, v]) => k.startsWith('w:') && v.n >= 2 && v.c / v.n < 0.6).map(([k]) => k.slice(2)).slice(0, 12);
   const music = h('input', { type: 'checkbox', checked: s.settings.music ? '' : null });
   music.onchange = () => { s.settings.music = music.checked; store.save(); audio.setMusic(music.checked); };
+  // "Read it to Pip": off unless a grown-up turns it on. Turning it on asks for the microphone right here.
+  const rap = h('input', { type: 'checkbox', checked: s.settings.readAloud ? '' : null });
+  const raMsg = h('p', { class: 'tip ra-msg' });
+  rap.onchange = async () => {
+    if (!rap.checked) { s.settings.readAloud = false; store.save(); raMsg.textContent = ''; return; }
+    raMsg.textContent = 'Asking this device for the microphone…';
+    const r = await readaloud.probe();
+    if (r === 'ok') { s.settings.readAloud = true; store.save(); raMsg.textContent = 'On. The microphone is only used when your child taps it.'; }
+    else {
+      rap.checked = false; s.settings.readAloud = false; store.save();
+      raMsg.textContent = r === 'unsupported' ? 'This device or browser cannot record, so Read it to Pip stays off.'
+        : 'The microphone is blocked. Allow it for this site in the browser or device settings, then try again.';
+    }
+  };
   const what = l => l.g.length ? l.g.map(label).join(' ') : l.focus || 'review';
   const jumpSel = h('select', {}, ...LESSONS.map((l, i) => h('option', { value: i, selected: i === Math.max(cur, s.unlocked) ? '' : null }, `${l.id} — ${WORLDS[l.wi].name}: ${what(l)}`)));
   const jumpBtn = h('button', { class: 'pbtn' }, 'Open up to here');
@@ -672,7 +953,12 @@ function parentScreen() {
       pcard('Progress',
         h('p', {}, h('b', {}, `${Object.keys(s.done).length} of ${LESSONS.length}`), ' lessons done. Next up: ', h('b', {}, `${L.id} (${what(L)})`)),
         h('p', {}, 'Recent accuracy: ', h('b', {}, acc + '%'), ' — the game adjusts difficulty to keep this near 85%.'),
-        h('p', {}, 'Played today: ', h('b', {}, Math.round(store.minutesToday()) + ' min'), `. Books read: ${s.books.length}. Wordlings: ${s.wordlings.length}.`)),
+        h('p', {}, 'Letters traced: ', h('b', {}, String(Object.keys(s.trace || {}).length)), ' sounds so far (a finger-tracing step follows each new sound).'),
+        h('p', {}, 'Played today: ', h('b', {}, Math.round(store.minutesToday()) + ' min'), `. Books read: ${s.books.length}. Wordlings: ${s.wordlings.length}.`),
+        h('p', { class: 'p-reads' }, 'Book pages read aloud to Pip: ', h('b', {}, String(store.pagesReadAloud())), s.settings.readAloud ? '.' : ' (the microphone option in Settings offers it after each page).')),
+      pcard('Understanding stories', ...comprehensionCard()),
+      pcard('Reading speed', ...speedCard()),
+      pcard('Daily practice and big books', ...practiceCard()),
       pcard('Sounds (tap to hear)',
         h('div', { class: 'snd-grid' }, sounds),
         h('p', { class: 'legend' }, h('i', { class: 'snd m-1' }), 'not seen ', h('i', { class: 'snd m0' }), 'learning ', h('i', { class: 'snd m2' }), 'getting there ', h('i', { class: 'snd m4' }), 'secure')),
@@ -682,6 +968,9 @@ function parentScreen() {
         h('p', { class: 'tip' }, 'Tip: after each story, ask your child to read it to you again. Re-reading builds fluency.')),
       pcard('Settings',
         h('label', {}, music, ' Background music'),
+        h('label', {}, rap, ' “Read it to Pip” (microphone)'),
+        h('p', { class: 'tip' }, 'Your child can read a word or a book page aloud (the book pages are offered after every word has been tapped) and hear themselves, then hear the model. The recording stays on this device, is never saved or sent anywhere, and is deleted straight after it plays.'),
+        raMsg,
         h('label', {}, 'Already reading? Skip ahead to ', jumpSel), jumpBtn,
         h('div', { class: 'p-row' }, resetBtn)),
       pcard('How Wordwild teaches',
@@ -694,6 +983,70 @@ function parentScreen() {
     ));
   show('parent', el);
 }
+// ---------- Grown-ups corner: story questions, reading speed, daily practice ----------
+const pct = (c, n) => (n ? Math.round(100 * c / n) : 0);
+const secs = x => Math.max(1, Math.round(x));
+
+function comprehensionCard() {
+  const c = store.comprehension();
+  const n = c.k.lit.n + c.k.think.n, r = c.k.lit.c + c.k.think.c;
+  if (!n) return [
+    h('p', { class: 'p-comp' }, 'No story questions answered yet.'),
+    h('p', { class: 'tip' }, 'After each story your child answers 2 or 3 spoken questions about it: who, what or where, and (from World 3) a “why” or “how did they feel” question.'),
+  ];
+  const weak = Object.entries(c.s).filter(([, t]) => t.n >= 2 && t.c / t.n < 0.5).map(([id]) => storyOf(id) && storyOf(id).title).filter(Boolean).slice(0, 5);
+  return [
+    h('p', { class: 'p-comp' }, h('b', {}, `${r} of ${n}`), ` story questions answered right first time (${pct(r, n)}%).`),
+    h('p', { class: 'p-comp-kinds' }, 'Who, what, where: ', h('b', {}, `${c.k.lit.c} of ${c.k.lit.n}`),
+      c.k.think.n ? [' · Why, how they felt, what happens next: ', h('b', {}, `${c.k.think.c} of ${c.k.think.n}`)] : null),
+    weak.length ? h('p', {}, 'Worth reading again together: ', weak.map(t => h('span', { class: 'chip' }, t))) : null,
+    h('p', { class: 'tip' }, 'Thinking questions are harder than who/what/where. When you read together, ask “why?” or “how do you think they felt?” on a page.'),
+  ];
+}
+
+// "Reads a word in about 4 seconds, down from 7": earliest week against the latest, weeks with at least 5 readings.
+function trend(rows, key, count, enough, lead, unit) {
+  const ok = rows.filter(w => w[count] >= enough);
+  if (!ok.length) return null;
+  const last = ok[ok.length - 1][key];
+  if (ok.length < 2) return `${lead} about ${secs(last)} ${unit} so far.`;
+  const first = ok[0][key];
+  if (secs(last) < secs(first) && last <= first - 0.4) return `${lead} about ${secs(last)} ${unit}, down from ${secs(first)}.`;
+  if (secs(last) > secs(first) && last >= first + 0.4) return `${lead} about ${secs(last)} ${unit}, up from ${secs(first)}.`;
+  return `${lead} about ${secs(last)} ${unit}, about the same as at the start.`;
+}
+
+function speedCard() {
+  const weeks = store.readingWeeks();
+  const word = trend(weeks.map(w => ({ words: w.words, word: w.word })), 'word', 'words', 5, 'Reads a word in', 'seconds');
+  const sent = trend(weeks.map(w => ({ sentenceWords: w.sentenceWords, sentence: w.sentence })), 'sentence', 'sentenceWords', 10, 'In sentences, takes', 'seconds a word');
+  const slow = store.slowWords(8, 3);
+  const shown = weeks.filter(w => w.words > 0);
+  const top = Math.max(1, ...shown.map(w => w.word));
+  return [
+    word || sent ? [word ? h('p', { class: 'p-speed' }, h('b', {}, word)) : null, sent ? h('p', { class: 'p-speed-sent' }, sent) : null]
+      : h('p', { class: 'p-speed' }, 'Not enough yet. Reading speed is timed quietly while your child plays (about 5 words in a week are needed).'),
+    shown.length > 1 ? h('div', { class: 'flu-bars', 'aria-label': 'Seconds per word, week by week' },
+      shown.map(w => h('i', { style: { height: Math.max(8, Math.round(60 * w.word / top)) + 'px' }, title: `Week of ${w.week}: about ${secs(w.word)} seconds a word` }))) : null,
+    slow.length ? h('p', { class: 'p-slow' }, 'Slowest words to practise together: ', slow.map(x => h('span', { class: 'chip' }, `${x.w} · ${secs(x.secs)} s`))) : h('p', { class: 'tip' }, 'Slow words will be listed here once some words have been read a few times.'),
+    h('p', { class: 'tip' }, 'Timed from when a word appears until the right answer, not counting the time the voice is talking. Your child never sees a timer, and it has no effect on stars or gems. Use it as a trend, not a score.'),
+  ];
+}
+
+function practiceCard() {
+  const s = store.state();
+  const read = Object.keys(BOOKS).filter(id => s.books.includes(id)).length;
+  return [
+    worldOneDone()
+      ? h('p', { class: 'p-practice' }, 'Daily practice: ', h('b', {}, `${store.practiceDays(30)} of the last 30 days`), ` (${store.practiceRounds()} rounds in all). `, store.practicedToday() ? 'Done today.' : 'Not yet today.')
+      : h('p', { class: 'p-practice' }, 'Daily practice opens on the map once World 1 is finished.'),
+    everythingDone()
+      ? h('p', { class: 'p-books' }, 'Big books read: ', h('b', {}, `${read} of ${Object.keys(BOOKS).length}`), '.')
+      : h('p', { class: 'p-books' }, 'Eight longer books open one at a time once every world is finished.'),
+    h('p', { class: 'tip' }, 'Daily practice mixes the sounds, words and heart words that are due for review across all the finished worlds, then ends with a small reward. It never runs out.'),
+  ];
+}
+
 function pcard(title, ...kids) { return h('div', { class: 'pcard' }, h('h3', {}, title), ...kids); }
 
 // ================================================================ Credits & licences
@@ -732,4 +1085,5 @@ if (store.state().name && store.state().cloud) {
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }
-window.__ww = { store, mapScreen, startLesson, hatchScreen, parentScreen, creditsScreen, LESSONS };
+window.__ww = { store, mapScreen, startLesson, hatchScreen, parentScreen, creditsScreen, LESSONS, games, trace, readaloud,
+  startPractice, practicePlan, arcadeScreen, worldCompleteMoment, runBonus, finishedScreen, libraryScreen, rereadStory, bigBookState, STORIES, BOOKS };
