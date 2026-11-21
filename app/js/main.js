@@ -269,7 +269,9 @@ function lessonPlan(i) {
   for (let k = 0; k < L.g.length; k += 3) {
     const grp = L.g.slice(k, k + 3);
     grp.forEach(g => steps.push(['meet', g]));
-    steps.push(['pop', shuffle([...grp, ...grp, ...L.g.slice(0, k)]).slice(0, Math.max(4, grp.length * 2))]);
+    // Every new sound is a target at least once; the rest are repeats or this lesson's earlier sounds.
+    const n = Math.max(4, grp.length * 2);
+    steps.push(['pop', shuffle([...grp, ...shuffle([...grp, ...L.g.slice(0, k)]).slice(0, n - grp.length)])]);
   }
   const nb = 2;
   ordered.slice(0, nb).forEach((w, k) => steps.push(['hop', w, k === 0]));
