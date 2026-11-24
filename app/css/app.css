@@ -226,6 +226,8 @@ canvas.fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-even
 .bubble.multi span { font-size: 2.4em; }
 .bubble.popped { transition: transform .25s, opacity .25s; opacity: 0; scale: 1.6; }
 .bubble.nope { filter: grayscale(.6) brightness(.9); }
+.bubble.hint { box-shadow: 0 0 0 6px #ffd23f, 0 0 28px 8px #ffd23f; animation: hint-pulse 1s ease-in-out infinite alternate; }
+@keyframes hint-pulse { from { box-shadow: 0 0 0 4px #ffd23f, 0 0 16px 4px #ffd23f; } to { box-shadow: 0 0 0 8px #ffd23f, 0 0 34px 12px #ffd23f; } }
 .pop-hud { position: absolute; top: 8px; left: 14px; right: 14px; display: flex; align-items: center; gap: 12px; z-index: 3; pointer-events: none; }
 .speed .pop-hud { position: relative; top: 0; left: 0; right: 0; width: min(560px, 90vw); }
 .timer-bar { flex: 1; height: 16px; background: rgba(0,0,0,.2); border-radius: 8px; overflow: hidden; }
@@ -767,3 +769,4 @@ canvas.fx { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-even
 .screen-hatch.theme-coop .hatch.world-done, .screen-hatch.theme-shore .hatch.world-done, .screen-hatch.theme-roost .hatch.world-done { background: linear-gradient(180deg, var(--bg1), var(--bg2)); }
 .world-scenery { display: contents; }
 .hatch.world-done .go { position: relative; z-index: 2; }
+@media (prefers-reduced-motion: reduce) { .bubble.hint { animation: none; } }

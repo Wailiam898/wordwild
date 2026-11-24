@@ -127,7 +127,9 @@ export function soundPop(G, targets, opts = {}) {
   const lvl = store.level();
   const arcade = !!opts.seconds;
   const known = [...G.known.g];
-  let idx = 0, target = targets[0], right = 0, total = 0, missStreak = 0, score = 0, combo = 0;
+  let idx = 0, target = targets[0], right = 0, total = 0, missStreak = 0, score = 0, combo = 0, wrongHere = 0;
+  // After two wrong taps for the same sound, the right bubbles glow so a child is never stuck.
+  const showHint = () => bubbles.forEach(b => b.el.classList.toggle('hint', wrongHere >= 2 && b.g === target && !b.popped));
   let firstTry = true;
   let alive = true, last = performance.now(), spawnT = 0;
   const bubbles = [];
@@ -159,6 +161,7 @@ export function soundPop(G, targets, opts = {}) {
     el.addEventListener('pointerdown', () => hit(b));
     field.append(el);
     bubbles.push(b);
+    if (wrongHere >= 2 && g === target) el.classList.add('hint');
   }
 
   async function hit(b) {
@@ -177,7 +180,7 @@ export function soundPop(G, targets, opts = {}) {
       if (combo >= 3) { comboEl.textContent = `x${Math.min(combo, 5)}`; anim(comboEl, 'combo-pop', 700); }
       store.record('g:' + target, firstTry);
       total++; if (firstTry) right++;
-      firstTry = true;
+      firstTry = true; wrongHere = 0; showHint();
       G.gem(b.el, 1);
       tap(P(target));
       idx++;
@@ -192,7 +195,7 @@ export function soundPop(G, targets, opts = {}) {
       b.el.classList.add('nope'); anim(b.el, 'shake', 400);
       sfx('bad'); combo = 0; comboEl.textContent = '';
       if (firstTry) store.confusion(target, b.g);
-      firstTry = false;
+      firstTry = false; wrongHere++; showHint();
       await tap(P(b.g));
       if (alive) say(P(target));
     }
